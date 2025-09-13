@@ -2,10 +2,12 @@
 import React from 'react';
 // FIX: Replaced non-existent v9 'User' import with v8 compatible type.
 import firebase from 'firebase/app';
+// FIX: Import for side effects and type augmentation for firebase.auth.User
+import 'firebase/auth';
 
 interface MemberDashboardProps {
-  // FIX: Used firebase.User type.
-  user: firebase.User;
+  // FIX: Used firebase.auth.User type.
+  user: firebase.auth.User;
 }
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user }) => {

@@ -1,6 +1,7 @@
 
 // FIX: Switched to Firebase v8 syntax to resolve module export errors.
-import firebase from "firebase/app";
+// FIX: Use `import * as firebase` for compatibility with different module settings.
+import * as firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
 

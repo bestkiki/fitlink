@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Switched to Firebase v8 compatible imports and types.
 import firebase from 'firebase/app';
+// FIX: Import for side effects and type augmentation for firebase.auth.User
+import 'firebase/auth';
 import { auth, db } from './firebase';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -15,8 +17,8 @@ export interface UserProfile {
 }
 
 const App: React.FC = () => {
-  // FIX: Used firebase.User type from v8 SDK.
-  const [user, setUser] = useState<firebase.User | null>(null);
+  // FIX: Used firebase.auth.User type from v8 SDK.
+  const [user, setUser] = useState<firebase.auth.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('landing');
