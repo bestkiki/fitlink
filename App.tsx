@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
+// FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
+import firebase from 'firebase/compat/app';
 // FIX: Switched to Firebase v8 compatible imports and types.
-import firebase from 'firebase/app';
 // FIX: Import for side effects and type augmentation for firebase.auth.User
-import 'firebase/auth';
+import 'firebase/compat/auth';
 import { auth, db } from './firebase';
 import Header from './components/Header';
 import Footer from './components/Footer';

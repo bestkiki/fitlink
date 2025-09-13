@@ -1,9 +1,10 @@
 
 import React from 'react';
+// FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
+import firebase from 'firebase/compat/app';
 // FIX: Replaced non-existent v9 'User' import with v8 compatible type.
-import firebase from 'firebase/app';
 // FIX: Import for side effects and type augmentation for firebase.auth.User
-import 'firebase/auth';
+import 'firebase/compat/auth';
 
 interface MemberDashboardProps {
   // FIX: Used firebase.auth.User type.

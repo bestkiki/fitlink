@@ -1,9 +1,8 @@
 
-// FIX: Switched to Firebase v8 syntax to resolve module export errors.
-// FIX: Use `import * as firebase` for compatibility with different module settings.
-import * as firebase from "firebase/app";
-import "firebase/auth";
-import "firebase/firestore";
+// FIX: Updated Firebase imports to use v9 compat libraries to resolve property errors.
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
