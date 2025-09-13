@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
 import firebase from 'firebase/compat/app';
 // FIX: Import for side effects and type augmentation for firebase.auth.User
 import 'firebase/compat/auth';
+import { db } from '../firebase';
 import { UsersIcon, CalendarIcon, ChatBubbleIcon } from '../components/icons';
 
 interface TrainerDashboardProps {
@@ -11,9 +11,37 @@ interface TrainerDashboardProps {
   user: firebase.User;
 }
 
+interface Member {
+    id: string;
+    email: string;
+}
+
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const querySnapshot = await db.collection('users').where('trainerId', '==', user.uid).get();
+        const memberData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          email: doc.data().email,
+        }));
+        setMembers(memberData);
+      } catch (err) {
+        console.error("Error fetching members:", err);
+        setError('회원 목록을 불러오는 데 실패했습니다.');
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    fetchMembers();
+  }, [user.uid]);
 
   const generateInviteLink = () => {
     const link = `${window.location.origin}/signup/coach/${user.uid}`;
@@ -93,6 +121,29 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
              <button className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
                 곧 제공될 예정입니다
             </button>
+        </div>
+      </div>
+
+      {/* Member List Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-white mb-6">내 회원 목록</h2>
+        <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+            {loadingMembers ? (
+                <p className="text-gray-400">회원 목록을 불러오는 중...</p>
+            ) : error ? (
+                <p className="text-red-400">{error}</p>
+            ) : members.length > 0 ? (
+                <ul className="space-y-4">
+                    {members.map(member => (
+                        <li key={member.id} className="p-4 bg-dark rounded-md flex justify-between items-center border border-gray-700">
+                           <span className="text-gray-300">{member.email}</span>
+                           {/* Future actions can go here, e.g., <button>View Details</button> */}
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-gray-400">아직 등록된 회원이 없습니다. 초대 링크를 통해 첫 회원을 등록해보세요!</p>
+            )}
         </div>
       </div>
     </div>
