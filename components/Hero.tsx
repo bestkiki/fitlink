@@ -1,10 +1,13 @@
-
 import React from 'react';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+    onNavigate: () => void;
+}
+
+const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
   return (
     <section className="relative h-[80vh] min-h-[500px] flex items-center justify-center text-center text-white">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://picsum.photos/1600/900?image=200')" }}>
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1740&auto=format&fit=crop')" }}>
         <div className="absolute inset-0 bg-black/60"></div>
       </div>
       <div className="relative z-10 px-6">
@@ -15,9 +18,9 @@ const Hero: React.FC = () => {
           FitLink와 함께 회원의 성장을 체계적으로 관리하고, 코칭의 가치를 높여보세요.
           스케줄 관리부터 운동 기록, 커뮤니케이션까지 한번에 해결할 수 있습니다.
         </p>
-        <a href="#cta" className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105">
+        <button onClick={onNavigate} className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105">
           지금 바로 시작하기
-        </a>
+        </button>
       </div>
     </section>
   );
