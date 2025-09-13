@@ -7,8 +7,8 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 
 interface MemberDashboardProps {
-  // FIX: Used firebase.auth.User type.
-  user: firebase.auth.User;
+  // FIX: Used firebase.User type.
+  user: firebase.User;
 }
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user }) => {

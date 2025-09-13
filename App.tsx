@@ -1,48 +1,43 @@
-
 import React, { useState, useEffect } from 'react';
-// FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
-import firebase from 'firebase/compat/app';
-// FIX: Switched to Firebase v8 compatible imports and types.
-// FIX: Import for side effects and type augmentation for firebase.auth.User
-import 'firebase/compat/auth';
 import { auth, db } from './firebase';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
-import LoadingSpinner from './components/LoadingSpinner';
-import UnauthenticatedApp, { Page } from './UnauthenticatedApp';
 import AuthenticatedApp from './AuthenticatedApp';
+import UnauthenticatedApp, { Page } from './UnauthenticatedApp';
+import LoadingSpinner from './components/LoadingSpinner';
 
 export interface UserProfile {
-  email: string;
-  role: 'trainer' | 'member';
+  role: 'trainer' | 'member' | null;
+  email?: string;
 }
 
-const App: React.FC = () => {
-  // FIX: Used firebase.auth.User type from v8 SDK.
-  const [user, setUser] = useState<firebase.auth.User | null>(null);
+function App() {
+  const [user, setUser] = useState<firebase.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('landing');
 
   useEffect(() => {
-    // FIX: Used v8's onAuthStateChanged method on the auth instance.
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        // Fetch user role from Firestore
-        // FIX: Switched to v8 syntax for Firestore document fetching.
-        const userDocRef = db.collection('users').doc(currentUser.uid);
-        const userDoc = await userDocRef.get();
+    const unsubscribe = auth.onAuthStateChanged(async (userAuth) => {
+      if (userAuth) {
+        // User is signed in.
+        const userDoc = await db.collection('users').doc(userAuth.uid).get();
         if (userDoc.exists) {
           setUserProfile(userDoc.data() as UserProfile);
         } else {
-          console.error("User profile not found in Firestore!");
-          setUserProfile(null); // Or handle this case appropriately
+          // Handle case where user exists in Auth but not in Firestore
+          setUserProfile({ role: null }); 
         }
+        setUser(userAuth);
       } else {
+        // User is signed out.
         setUser(null);
         setUserProfile(null);
-        setCurrentPage('landing'); // Reset to landing page on logout
+        setCurrentPage('landing');
       }
       setLoading(false);
     });
@@ -50,14 +45,14 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleNavigate = (page: Page) => {
-    window.scrollTo(0, 0);
-    setCurrentPage(page);
+  const handleLogout = async () => {
+    setLoading(true);
+    await auth.signOut();
+    // onAuthStateChanged will handle setting user to null and loading to false
   };
 
-  const handleLogout = () => {
-    // FIX: Used v8's signOut method on the auth instance.
-    auth.signOut().catch(error => console.error('Logout Error:', error));
+  const handleNavigate = (page: Page) => {
+    setCurrentPage(page);
   };
 
   if (loading) {
@@ -65,8 +60,12 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="bg-dark min-h-screen text-light font-sans flex flex-col">
-      <Header user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+    <div className="bg-dark text-gray-200 min-h-screen flex flex-col">
+      <Header 
+        user={user} 
+        onLogout={handleLogout} 
+        onNavigate={!user ? handleNavigate : undefined}
+      />
       <main className="flex-grow">
         {user && userProfile ? (
           <AuthenticatedApp user={user} userProfile={userProfile} />
@@ -77,6 +76,6 @@ const App: React.FC = () => {
       <Footer />
     </div>
   );
-};
+}
 
 export default App;

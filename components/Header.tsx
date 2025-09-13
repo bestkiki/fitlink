@@ -9,8 +9,8 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 
 interface HeaderProps {
-    // FIX: Used firebase.auth.User type.
-    user: firebase.auth.User | null;
+    // FIX: Used firebase.User type.
+    user: firebase.User | null;
     onNavigate?: (page: Page) => void;
     onLogout?: () => void;
 }

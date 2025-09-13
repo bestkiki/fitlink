@@ -10,8 +10,8 @@ import TrainerDashboard from './pages/TrainerDashboard';
 import MemberDashboard from './pages/MemberDashboard';
 
 interface AuthenticatedAppProps {
-  // FIX: Used firebase.auth.User type.
-  user: firebase.auth.User;
+  // FIX: Used firebase.User type.
+  user: firebase.User;
   userProfile: UserProfile;
 }
 
