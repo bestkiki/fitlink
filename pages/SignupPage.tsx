@@ -1,16 +1,37 @@
-
-import React, { useState } from 'react';
-// FIX: Removed v9 imports as they are not available in the v8 SDK.
+import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { Page } from '../UnauthenticatedApp';
 
 interface SignupPageProps {
   onNavigate: (page: Page) => void;
+  trainerId?: string | null;
 }
 
-const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
+const SignupPage: React.FC<SignupPageProps> = ({ onNavigate, trainerId }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isInviteLink, setIsInviteLink] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    if (trainerId) {
+      setInviteMessage("초대 링크를 확인하는 중...");
+      const userDocRef = db.collection('users').doc(trainerId);
+      userDocRef.get().then(doc => {
+        if (doc.exists && doc.data()?.role === 'trainer') {
+          setInviteMessage(`'${doc.data()?.email}' 트레이너님의 회원으로 가입합니다.`);
+          setIsInviteLink(true);
+        } else {
+          setInviteMessage("유효하지 않은 초대 링크입니다. 일반 회원가입으로 진행됩니다.");
+          setIsInviteLink(false);
+        }
+      }).catch(() => {
+        setInviteMessage("링크 확인 중 오류가 발생했습니다. 일반 회원가입으로 진행됩니다.");
+        setIsInviteLink(false);
+      });
+    }
+  }, [trainerId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,14 +49,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
         setLoading(false);
         return;
     }
-    if (!role) {
+    if (!role && !isInviteLink) {
         setError("역할(트레이너/회원)을 선택해주세요.");
         setLoading(false);
         return;
     }
 
     try {
-      // FIX: Used v8's createUserWithEmailAndPassword method on the auth instance.
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
@@ -44,11 +64,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
       }
 
       // Firestore에 사용자 역할 정보 저장
-      // FIX: Used v8 syntax for setting a firestore document.
-      await db.collection("users").doc(user.uid).set({
+      const finalRole = isInviteLink ? 'member' : role;
+      const userData: { email: string | null; role: string; trainerId?: string; } = {
         email: user.email,
-        role: role,
-      });
+        role: finalRole,
+      };
+
+      if (isInviteLink && trainerId) {
+        userData.trainerId = trainerId;
+      }
+
+      await db.collection("users").doc(user.uid).set(userData);
 
       alert('회원가입 성공! 이제 로그인해주세요.');
       onNavigate('login');
@@ -83,6 +109,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+          {inviteMessage && <p className="text-teal-300 text-sm text-center bg-teal-900/50 p-3 rounded-md">{inviteMessage}</p>}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address-signup" className="sr-only">이메일 주소</label>
@@ -98,15 +125,15 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
             </div>
           </div>
           
-          <fieldset className="pt-2">
+          <fieldset className="pt-2" disabled={isInviteLink}>
             <legend className="text-center text-sm font-medium text-gray-300 pb-2">가입 유형을 선택해주세요</legend>
-            <div className="flex items-center justify-around bg-dark p-2 rounded-md">
+            <div className={`flex items-center justify-around bg-dark p-2 rounded-md ${isInviteLink ? 'opacity-50' : ''}`}>
                 <label htmlFor="role-trainer" className="flex items-center cursor-pointer p-2 rounded-md hover:bg-dark-accent/50 w-1/2 justify-center">
                     <input id="role-trainer" name="role" type="radio" value="trainer" required className="focus:ring-primary h-4 w-4 text-primary border-gray-500 bg-dark" />
                     <span className="ml-3 block text-sm font-medium text-gray-200">🏋️ 트레이너</span>
                 </label>
                 <label htmlFor="role-member" className="flex items-center cursor-pointer p-2 rounded-md hover:bg-dark-accent/50 w-1/2 justify-center">
-                    <input id="role-member" name="role" type="radio" value="member" required className="focus:ring-primary h-4 w-4 text-primary border-gray-500 bg-dark" />
+                    <input id="role-member" name="role" type="radio" value="member" required className="focus:ring-primary h-4 w-4 text-primary border-gray-500 bg-dark" checked={isInviteLink} readOnly={isInviteLink} />
                     <span className="ml-3 block text-sm font-medium text-gray-200">🙋‍♂️ 회원</span>
                 </label>
             </div>

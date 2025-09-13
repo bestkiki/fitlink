@@ -13,6 +13,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 export interface UserProfile {
   role: 'trainer' | 'member' | null;
   email?: string;
+  trainerId?: string;
 }
 
 function App() {
@@ -20,24 +21,43 @@ function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('landing');
+  const [trainerIdFromUrl, setTrainerIdFromUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    // Handle routing based on path
+    const path = window.location.pathname;
+    const signupMatch = path.match(/^\/signup\/coach\/([a-zA-Z0-9]+)/);
+
+    if (signupMatch) {
+      const trainerId = signupMatch[1];
+      setTrainerIdFromUrl(trainerId);
+      setCurrentPage('signup');
+    }
+    
     const unsubscribe = auth.onAuthStateChanged(async (userAuth) => {
+      setLoading(true);
       if (userAuth) {
         // User is signed in.
-        const userDoc = await db.collection('users').doc(userAuth.uid).get();
-        if (userDoc.exists) {
-          setUserProfile(userDoc.data() as UserProfile);
-        } else {
-          // Handle case where user exists in Auth but not in Firestore
-          setUserProfile({ role: null }); 
+        try {
+          const userDoc = await db.collection('users').doc(userAuth.uid).get();
+          if (userDoc.exists) {
+            setUserProfile(userDoc.data() as UserProfile);
+          } else {
+            setUserProfile({ role: null }); 
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUserProfile({ role: null });
+        } finally {
+          setUser(userAuth);
         }
-        setUser(userAuth);
       } else {
         // User is signed out.
         setUser(null);
         setUserProfile(null);
-        setCurrentPage('landing');
+        if (!signupMatch) { // Do not override signup page if on invite link
+            setCurrentPage('landing');
+        }
       }
       setLoading(false);
     });
@@ -48,12 +68,27 @@ function App() {
   const handleLogout = async () => {
     setLoading(true);
     await auth.signOut();
-    // onAuthStateChanged will handle setting user to null and loading to false
+    window.history.pushState({}, '', '/');
   };
 
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
+    const path = page === 'landing' ? '/' : `/${page}`;
+    window.history.pushState({ page }, '', path);
   };
+  
+  // Update page on browser back/forward
+  useEffect(() => {
+    const handlePopState = () => {
+        const path = window.location.pathname.substring(1);
+        if (['landing', 'login', 'signup'].includes(path) || path === '') {
+            setCurrentPage(path === '' ? 'landing' : path as Page);
+        }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
 
   if (loading) {
     return <LoadingSpinner />;
@@ -70,7 +105,11 @@ function App() {
         {user && userProfile ? (
           <AuthenticatedApp user={user} userProfile={userProfile} />
         ) : (
-          <UnauthenticatedApp currentPage={currentPage} onNavigate={handleNavigate} />
+          <UnauthenticatedApp 
+            currentPage={currentPage} 
+            onNavigate={handleNavigate} 
+            trainerId={trainerIdFromUrl}
+          />
         )}
       </main>
       <Footer />
