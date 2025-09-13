@@ -1,10 +1,13 @@
+
 import React from 'react';
 import { DumbbellIcon } from './icons';
 import { Page } from '../UnauthenticatedApp';
-import { User } from 'firebase/auth';
+// FIX: Replaced non-existent v9 'User' import with v8 compatible type.
+import firebase from 'firebase/app';
 
 interface HeaderProps {
-    user: User | null;
+    // FIX: Used firebase.User type.
+    user: firebase.User | null;
     onNavigate?: (page: Page) => void;
     onLogout?: () => void;
 }

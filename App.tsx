@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+// FIX: Switched to Firebase v8 compatible imports and types.
+import firebase from 'firebase/app';
 import { auth, db } from './firebase';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
-import UnauthenticatedApp from './UnauthenticatedApp';
+import UnauthenticatedApp, { Page } from './UnauthenticatedApp';
 import AuthenticatedApp from './AuthenticatedApp';
 
 export interface UserProfile {
@@ -14,18 +15,22 @@ export interface UserProfile {
 }
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  // FIX: Used firebase.User type from v8 SDK.
+  const [user, setUser] = useState<firebase.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<Page>('landing');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    // FIX: Used v8's onAuthStateChanged method on the auth instance.
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         // Fetch user role from Firestore
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
+        // FIX: Switched to v8 syntax for Firestore document fetching.
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        const userDoc = await userDocRef.get();
+        if (userDoc.exists) {
           setUserProfile(userDoc.data() as UserProfile);
         } else {
           console.error("User profile not found in Firestore!");
@@ -34,6 +39,7 @@ const App: React.FC = () => {
       } else {
         setUser(null);
         setUserProfile(null);
+        setCurrentPage('landing'); // Reset to landing page on logout
       }
       setLoading(false);
     });
@@ -41,8 +47,14 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  const handleNavigate = (page: Page) => {
+    window.scrollTo(0, 0);
+    setCurrentPage(page);
+  };
+
   const handleLogout = () => {
-    signOut(auth).catch(error => console.error('Logout Error:', error));
+    // FIX: Used v8's signOut method on the auth instance.
+    auth.signOut().catch(error => console.error('Logout Error:', error));
   };
 
   if (loading) {
@@ -51,12 +63,12 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-dark min-h-screen text-light font-sans flex flex-col">
-      <Header user={user} onLogout={handleLogout} />
+      <Header user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
       <main className="flex-grow">
         {user && userProfile ? (
           <AuthenticatedApp user={user} userProfile={userProfile} />
         ) : (
-          <UnauthenticatedApp />
+          <UnauthenticatedApp currentPage={currentPage} onNavigate={handleNavigate} />
         )}
       </main>
       <Footer />

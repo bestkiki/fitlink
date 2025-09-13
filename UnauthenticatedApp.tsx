@@ -1,27 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 
 export type Page = 'landing' | 'login' | 'signup';
 
-const UnauthenticatedApp: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
+interface UnauthenticatedAppProps {
+  currentPage: Page;
+  onNavigate: (page: Page) => void;
+}
 
-  const handleNavigate = (page: Page) => {
-    window.scrollTo(0, 0);
-    setCurrentPage(page);
-  };
-
+const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, onNavigate }) => {
   const renderPage = () => {
     switch (currentPage) {
       case 'login':
-        return <LoginPage onNavigate={handleNavigate} />;
+        return <LoginPage onNavigate={onNavigate} />;
       case 'signup':
-        return <SignupPage onNavigate={handleNavigate} />;
+        return <SignupPage onNavigate={onNavigate} />;
       case 'landing':
       default:
-        return <LandingPage onNavigate={handleNavigate} />;
+        return <LandingPage onNavigate={onNavigate} />;
     }
   };
 

@@ -1,6 +1,6 @@
+
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; 
+// FIX: Removed v9 imports as they are not available in the v8 SDK.
 import { auth, db } from '../firebase';
 import { Page } from '../UnauthenticatedApp';
 
@@ -35,11 +35,17 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // FIX: Used v8's createUserWithEmailAndPassword method on the auth instance.
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
+      if (!user) {
+        throw new Error("User creation failed.");
+      }
+
       // Firestore에 사용자 역할 정보 저장
-      await setDoc(doc(db, "users", user.uid), {
+      // FIX: Used v8 syntax for setting a firestore document.
+      await db.collection("users").doc(user.uid).set({
         email: user.email,
         role: role,
       });

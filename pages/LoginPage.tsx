@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from "firebase/auth";
+// FIX: Removed v9 'signInWithEmailAndPassword' import as it's not exported in v8.
 import { auth } from '../firebase';
 import { Page } from '../UnauthenticatedApp';
 
@@ -27,7 +28,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // FIX: Used v8's signInWithEmailAndPassword method on the auth instance.
+      await auth.signInWithEmailAndPassword(email, password);
       // Login success is handled by the onAuthStateChanged listener in App.tsx
     } catch (err: any) {
       console.error("Login Error:", err.code, err.message);

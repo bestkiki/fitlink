@@ -1,11 +1,14 @@
+
 import React from 'react';
-import { User } from 'firebase/auth';
+// FIX: Replaced non-existent v9 'User' import with v8 compatible type.
+import firebase from 'firebase/app';
 import { UserProfile } from './App';
 import TrainerDashboard from './pages/TrainerDashboard';
 import MemberDashboard from './pages/MemberDashboard';
 
 interface AuthenticatedAppProps {
-  user: User;
+  // FIX: Used firebase.User type.
+  user: firebase.User;
   userProfile: UserProfile;
 }
 
