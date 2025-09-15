@@ -14,6 +14,10 @@ export interface UserProfile {
   role: 'trainer' | 'member' | null;
   email?: string;
   trainerId?: string;
+  name?: string;
+  contact?: string;
+  goal?: string;
+  notes?: string;
 }
 
 function App() {
