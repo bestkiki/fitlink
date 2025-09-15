@@ -1,4 +1,3 @@
-
 import React from 'react';
 // FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
 import firebase from 'firebase/compat/app';
@@ -21,7 +20,7 @@ const AuthenticatedApp: React.FC<AuthenticatedAppProps> = ({ user, userProfile }
   }
 
   if (userProfile.role === 'member') {
-    return <MemberDashboard user={user} />;
+    return <MemberDashboard user={user} userProfile={userProfile} />;
   }
 
   return (
