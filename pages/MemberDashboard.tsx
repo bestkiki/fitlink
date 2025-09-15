@@ -85,7 +85,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
               <InfoField label="이름" value={userProfile.name} />
               <InfoField label="연락처" value={userProfile.contact} />
               <InfoField label="운동 목표" value={userProfile.goal} />
-              <InfoField label="트레이너 메모" value={userProfile.notes} />
             </div>
           </div>
         </div>
