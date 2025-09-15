@@ -12,13 +12,23 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout }) => {
-  // Use a dummy navigate function if not provided (for AuthenticatedApp)
   const navigate = onNavigate || (() => {});
+
+  const handleLogoClick = () => {
+    if (user) {
+      // For logged-in users, clicking the logo should take them to their dashboard.
+      // A simple way to reset the state of the dashboard is to navigate to the root.
+      window.location.href = '/';
+    } else {
+      // For logged-out users, it navigates to the landing page.
+      navigate('landing');
+    }
+  };
 
   return (
     <header className="bg-dark-accent/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <button onClick={() => navigate('landing')} className="flex items-center space-x-2 disabled:cursor-default" disabled={!!user}>
+        <button onClick={handleLogoClick} className="flex items-center space-x-2">
           <DumbbellIcon className="w-8 h-8 text-primary" />
           <span className="text-2xl font-bold text-white">FitLink</span>
         </button>
