@@ -5,7 +5,7 @@ import { Member } from '../pages/TrainerDashboard';
 interface AddEditMemberModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (memberData: Omit<Member, 'id' | 'email'>) => void;
+    onSave: (memberData: Omit<Member, 'id' | 'email'>) => Promise<void>;
     member: Member | null;
 }
 
@@ -15,6 +15,7 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
     const [goal, setGoal] = useState('');
     const [notes, setNotes] = useState('');
     const [error, setError] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (member) {
@@ -30,21 +31,31 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
             setNotes('');
         }
         setError('');
+        setIsSaving(false);
     }, [member, isOpen]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) {
             setError('이름은 필수 항목입니다.');
             return;
         }
         if (!member) return;
 
-        onSave({
-            name,
-            contact,
-            goal,
-            notes,
-        });
+        setIsSaving(true);
+        setError(''); // Clear previous errors
+
+        try {
+            await onSave({
+                name,
+                contact,
+                goal,
+                notes,
+            });
+        } catch (e: any) {
+            setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!member) return null;
@@ -52,13 +63,13 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={member.name ? '회원 정보 수정' : '회원 정보 추가'}>
             <div className="space-y-4">
-                {error && <p className="text-red-400 text-sm">{error}</p>}
+                {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-md">{error}</p>}
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">이메일 (수정 불가)</label>
                     <input
                         type="email"
                         id="email"
-                        value={member.email}
+                        value={member.email || ''}
                         readOnly
                         className="w-full bg-dark p-2 rounded-md text-gray-500 border border-gray-600 cursor-not-allowed"
                     />
@@ -108,11 +119,11 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
                     ></textarea>
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
-                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    <button onClick={onClose} disabled={isSaving} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
                         취소
                     </button>
-                    <button onClick={handleSave} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        저장
+                    <button onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isSaving ? '저장 중...' : '저장'}
                     </button>
                 </div>
             </div>

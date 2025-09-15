@@ -69,7 +69,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
     setSelectedMember(null);
   };
 
-  const handleSaveMember = async (memberData: Omit<Member, 'id'>) => {
+  const handleSaveMember = async (memberData: Omit<Member, 'id' | 'email'>) => {
     if (!selectedMember) return;
 
     try {
@@ -78,9 +78,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
             prevMembers.map(m => m.id === selectedMember.id ? { ...m, ...memberData } : m)
         );
         handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
         console.error("Error updating member:", err);
-        // You can add error handling for the user here
+        if (err.code === 'permission-denied' || err.code === 'PERMISSION_DENIED') {
+            throw new Error('회원 정보를 수정할 권한이 없습니다. Firebase 보안 규칙을 확인해주세요.');
+        }
+        throw new Error('서버 오류로 인해 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
 
