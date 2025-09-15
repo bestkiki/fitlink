@@ -3,10 +3,11 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, BodyMeasurement, ExerciseLog } from '../App';
-import { ChartBarIcon, CalendarIcon, ChatBubbleIcon, UserCircleIcon, PencilIcon, PlusCircleIcon } from '../components/icons';
+import { ChartBarIcon, CalendarIcon, ChatBubbleIcon, UserCircleIcon, PencilIcon, PlusCircleIcon, ArrowLeftIcon } from '../components/icons';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
+import BookingCalendar from './BookingCalendar';
 
 interface MemberDashboardProps {
   user: firebase.User;
@@ -25,7 +26,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [trainer, setTrainer] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'progress'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'progress' | 'booking'>('dashboard');
 
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
@@ -117,8 +118,8 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   if (view === 'progress') {
     return (
       <div className="container mx-auto px-6 py-12">
-          <button onClick={() => setView('dashboard')} className="flex items-center space-x-2 text-primary mb-6 hover:underline">
-              <ChartBarIcon className="w-5 h-5" />
+          <button onClick={() => setView('dashboard')} className="flex items-center space-x-2 text-secondary mb-6 hover:underline">
+              <ArrowLeftIcon className="w-5 h-5" />
               <span>대시보드로 돌아가기</span>
           </button>
           <h1 className="text-3xl font-bold mb-8">나의 성장 기록</h1>
@@ -179,7 +180,13 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
     );
   }
 
+  if (view === 'booking') {
+      return <BookingCalendar user={user} userProfile={currentProfile} onBack={() => setView('dashboard')} />
+  }
+
+
   const memberName = currentProfile.name || user.email;
+  const hasTrainer = !!currentProfile.trainerId;
 
   return (
     <>
@@ -234,21 +241,25 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                   내 성장 기록 보기
                 </button>
               </div>
-              <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center opacity-50">
+              <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
                 <CalendarIcon className="w-12 h-12 text-secondary mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">수업 예약</h2>
-                <p className="text-gray-400 flex-grow">PT 및 그룹 수업 스케줄을 확인하고 예약합니다.</p>
-                <button disabled className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
-                  곧 제공될 예정입니다
+                <p className="text-gray-400 flex-grow">{hasTrainer ? 'PT 및 그룹 수업 스케줄을 확인하고 예약합니다.' : '수업을 예약하려면 먼저 담당 트레이너가 배정되어야 합니다.'}</p>
+                <button
+                    onClick={() => setView('booking')}
+                    disabled={!hasTrainer}
+                    className="mt-4 bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                    {hasTrainer ? '예약 하러 가기' : '트레이너 미배정'}
                 </button>
               </div>
-               <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center md:col-span-2 opacity-50">
+               <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center md:col-span-2">
                 <ChatBubbleIcon className="w-12 h-12 text-secondary mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">메시지</h2>
-                <p className="text-gray-400 flex-grow">트레이너와 메시지를 주고 받으며 피드백을 받습니다.</p>
-                <button disabled className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
-                  곧 제공될 예정입니다
-                </button>
+                <p className="text-gray-400 flex-grow">트레이너와 메시지를 주고 받으며 피드백을 받습니다. (알림 확인)</p>
+                <p className="mt-4 text-sm text-gray-500">
+                  (새로운 메시지는 우측 상단 🔔 아이콘을 확인하세요)
+                </p>
               </div>
             </div>
           </div>

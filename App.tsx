@@ -43,6 +43,32 @@ export interface BodyMeasurement {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface Availability {
+  id: string;
+  startTime: firebase.firestore.Timestamp;
+  endTime: firebase.firestore.Timestamp;
+}
+
+export interface Appointment {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  startTime: firebase.firestore.Timestamp;
+  endTime: firebase.firestore.Timestamp;
+  status: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_trainer';
+  createdAt: firebase.firestore.Timestamp;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  message: string;
+  read: boolean;
+  createdAt: firebase.firestore.Timestamp;
+}
+
+
 function App() {
   const [user, setUser] = useState<firebase.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);

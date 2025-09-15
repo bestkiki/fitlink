@@ -1,15 +1,11 @@
-
 import React from 'react';
 import { DumbbellIcon } from './icons';
 import { Page } from '../UnauthenticatedApp';
-// FIX: Updated Firebase imports to use the v9 compat libraries to fix type errors.
 import firebase from 'firebase/compat/app';
-// FIX: Replaced non-existent v9 'User' import with v8 compatible type.
-// FIX: Import for side effects and type augmentation for firebase.auth.User
 import 'firebase/compat/auth';
+import NotificationsBell from './NotificationsBell';
 
 interface HeaderProps {
-    // FIX: Used firebase.User type.
     user: firebase.User | null;
     onNavigate?: (page: Page) => void;
     onLogout?: () => void;
@@ -35,9 +31,12 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout }) => {
         )}
         <div className="flex items-center space-x-4">
           {user ? (
-            <button onClick={onLogout} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
-              로그아웃
-            </button>
+            <>
+              <NotificationsBell user={user} />
+              <button onClick={onLogout} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                로그아웃
+              </button>
+            </>
           ) : (
             <>
               <button onClick={() => navigate('login')} className="text-gray-300 hover:text-white transition-colors">로그인</button>

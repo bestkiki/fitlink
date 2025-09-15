@@ -8,6 +8,7 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import { UserProfile } from '../App';
 import MemberDetailView from './MemberDetailView';
+import ScheduleManager from './ScheduleManager';
 
 interface TrainerDashboardProps {
   user: firebase.User;
@@ -17,6 +18,8 @@ interface TrainerDashboardProps {
 export interface Member extends Omit<UserProfile, 'role' | 'trainerId'> {
     id: string;
 }
+
+type TrainerDashboardView = 'dashboard' | 'member_detail' | 'schedule';
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
@@ -35,6 +38,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
   
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  const [currentView, setCurrentView] = useState<TrainerDashboardView>('dashboard');
   const [viewingMember, setViewingMember] = useState<Member | null>(null);
 
   const membersSectionRef = useRef<HTMLDivElement>(null);
@@ -144,12 +148,26 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     membersSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  if (viewingMember) {
+  const handleViewMember = (member: Member) => {
+    setViewingMember(member);
+    setCurrentView('member_detail');
+  };
+  
+  const handleBackToDashboard = () => {
+    setViewingMember(null);
+    setCurrentView('dashboard');
+  }
+
+  if (currentView === 'member_detail' && viewingMember) {
       return <MemberDetailView 
                 member={viewingMember} 
-                onBack={() => setViewingMember(null)}
+                onBack={handleBackToDashboard}
                 onEditProfile={() => handleOpenEditModal(viewingMember)}
              />
+  }
+  
+  if (currentView === 'schedule') {
+    return <ScheduleManager user={user} onBack={handleBackToDashboard} />;
   }
 
   return (
@@ -212,12 +230,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
               </button>
           </div>
           
-          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center opacity-50">
+          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
               <CalendarIcon className="w-12 h-12 text-primary mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">스케줄 관리</h2>
-              <p className="text-gray-400">수업 스케줄을 확인하고 예약합니다.</p>
-              <button disabled className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
-                  곧 제공될 예정입니다
+              <p className="text-gray-400">예약 가능 시간을 설정하고 회원 예약을 관리합니다.</p>
+              <button onClick={() => setCurrentView('schedule')} className="mt-4 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                  스케줄 관리하기
               </button>
           </div>
         </div>
@@ -239,7 +257,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 <p className="text-sm text-gray-400">{member.email}</p>
                             </div>
                             <div className="flex space-x-2 flex-shrink-0">
-                                <button onClick={() => setViewingMember(member)} className="p-2 bg-green-500/20 hover:bg-green-500/40 rounded-md transition-colors flex items-center space-x-2 text-sm text-green-400 font-semibold px-3">
+                                <button onClick={() => handleViewMember(member)} className="p-2 bg-green-500/20 hover:bg-green-500/40 rounded-md transition-colors flex items-center space-x-2 text-sm text-green-400 font-semibold px-3">
                                     <DocumentTextIcon className="w-5 h-5" />
                                     <span>기록 관리</span>
                                 </button>

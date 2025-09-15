@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import firebase from 'firebase/compat/app';
 import { Member } from './TrainerDashboard';
 import { BodyMeasurement, ExerciseLog, ExerciseSet } from '../App';
-import { ArrowLeftIcon, PlusCircleIcon, TrashIcon, PencilIcon } from '../components/icons';
+import { ArrowLeftIcon, PlusCircleIcon, TrashIcon, PencilIcon, ChatBubbleIcon } from '../components/icons';
 import ProgressChart from '../components/ProgressChart';
 
 interface MemberDetailViewProps {
@@ -16,6 +16,8 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
     const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
     const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [message, setMessage] = useState('');
+    const [messageStatus, setMessageStatus] = useState('');
 
     // Forms State
     const [showAddMeasurement, setShowAddMeasurement] = useState(false);
@@ -124,6 +126,28 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
             alert("운동 기록 저장에 실패했습니다.");
         }
     };
+    
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!message.trim()) return;
+
+        setMessageStatus('전송 중...');
+        try {
+            await db.collection('notifications').add({
+                userId: member.id,
+                message: `트레이너 메시지: "${message}"`,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+            setMessage('');
+            setMessageStatus('메시지가 성공적으로 전송되었습니다.');
+        } catch (error) {
+            console.error("Error sending message:", error);
+            setMessageStatus('메시지 전송에 실패했습니다.');
+        } finally {
+            setTimeout(() => setMessageStatus(''), 3000);
+        }
+    };
 
     const groupedExerciseLogs = useMemo(() => {
         return exerciseLogs.reduce((acc, log) => {
@@ -163,6 +187,23 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     <div className="bg-dark-accent p-6 rounded-lg">
                         <h2 className="text-xl font-bold mb-4">성장 그래프</h2>
                         <ProgressChart measurements={bodyMeasurements} />
+                    </div>
+                     {/* Message Box */}
+                    <div className="bg-dark-accent p-6 rounded-lg">
+                        <h2 className="text-xl font-bold mb-4 flex items-center"><ChatBubbleIcon className="w-6 h-6 mr-2 text-primary"/>메시지 보내기</h2>
+                        <form onSubmit={handleSendMessage}>
+                            <textarea
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                placeholder={`${member.name || '회원'}님에게 피드백이나 공지를 보낼 수 있습니다.`}
+                                rows={3}
+                                className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                            <div className="flex justify-between items-center mt-2">
+                                <p className="text-sm text-gray-400 h-5">{messageStatus}</p>
+                                <button type="submit" className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">전송</button>
+                            </div>
+                        </form>
                     </div>
                     {/* Exercise Logs */}
                     <div className="bg-dark-accent p-6 rounded-lg">
