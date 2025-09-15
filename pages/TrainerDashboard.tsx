@@ -2,20 +2,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon } from '../components/icons';
+import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon, IdCardIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import { UserProfile } from '../App';
 
 interface TrainerDashboardProps {
   user: firebase.User;
+  userProfile: UserProfile;
 }
 
 export interface Member extends Omit<UserProfile, 'role' | 'trainerId'> {
     id: string;
 }
 
-const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
+const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
+  const [profile, setProfile] = useState(userProfile);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
@@ -29,6 +32,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   const membersSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,13 +116,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
         handleCloseDeleteModal();
     } catch (err) {
         console.error("Error deleting member:", err);
-        // We can show an error to the user in the modal itself if we enhance it
         alert('회원 삭제에 실패했습니다. 권한을 확인하거나 다시 시도해주세요.');
     } finally {
         setIsDeleting(false);
     }
   };
 
+  const handleSaveProfile = async (profileData: Partial<UserProfile>) => {
+    try {
+      await db.collection('users').doc(user.uid).update(profileData);
+      setProfile(prevProfile => ({ ...prevProfile, ...profileData }));
+      setIsProfileModalOpen(false);
+    } catch (err: any) {
+      console.error("Error updating profile:", err);
+      throw new Error('프로필 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
 
   const scrollToMembers = () => {
     membersSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -131,7 +145,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
           트레이너 대시보드
         </h1>
         <p className="text-lg text-gray-300 mb-8">
-          환영합니다, <span className="font-semibold text-primary">{user.email}</span> 님!
+          환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -139,12 +153,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
           <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold text-white mb-4">회원 초대하기</h2>
             <p className="text-gray-400 mb-4">
-              회원을 초대하여 FitLink에서 함께 운동 계획을 관리하세요. 아래 버튼을 눌러 초대 링크를 생성하세요.
+              회원을 초대하여 FitLink에서 함께 운동 계획을 관리하세요.
             </p>
             {!inviteLink ? (
               <button
                 onClick={generateInviteLink}
-                className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors mt-auto"
               >
                 초대 링크 생성
               </button>
@@ -165,8 +179,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
               </div>
             )}
           </div>
+          
+          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
+              <IdCardIcon className="w-12 h-12 text-primary mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">내 프로필 관리</h2>
+              <p className="text-gray-400">회원에게 보여줄 프로필을 관리합니다.</p>
+              <button onClick={() => setIsProfileModalOpen(true)} className="mt-4 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                  프로필 수정
+              </button>
+          </div>
 
-          {/* Other feature cards */}
           <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
               <UsersIcon className="w-12 h-12 text-primary mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">회원 관리</h2>
@@ -175,18 +197,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
                   회원 목록 보기
               </button>
           </div>
-          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
+          
+          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center opacity-50">
               <CalendarIcon className="w-12 h-12 text-primary mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">스케줄 관리</h2>
               <p className="text-gray-400">수업 스케줄을 확인하고 예약합니다.</p>
-              <button className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
-                  곧 제공될 예정입니다
-              </button>
-          </div>
-          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
-              <ChatBubbleIcon className="w-12 h-12 text-primary mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">메시지</h2>
-              <p className="text-gray-400">회원과 메시지를 주고 받습니다.</p>
               <button className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
                   곧 제공될 예정입니다
               </button>
@@ -238,6 +253,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
         memberName={memberToDelete?.name || memberToDelete?.email || ''}
+      />
+      <EditTrainerProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSave={handleSaveProfile}
+        userProfile={profile}
       />
     </>
   );

@@ -16,7 +16,7 @@ interface AuthenticatedAppProps {
 
 const AuthenticatedApp: React.FC<AuthenticatedAppProps> = ({ user, userProfile }) => {
   if (userProfile.role === 'trainer') {
-    return <TrainerDashboard user={user} />;
+    return <TrainerDashboard user={user} userProfile={userProfile} />;
   }
 
   if (userProfile.role === 'member') {

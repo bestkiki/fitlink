@@ -18,6 +18,8 @@ export interface UserProfile {
   contact?: string;
   goal?: string;
   notes?: string;
+  specialization?: string; // e.g., "Weight loss, Bodybuilding"
+  career?: string; // e.g., "10+ years of experience, Certified..."
 }
 
 function App() {
