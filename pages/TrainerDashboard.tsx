@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon, IdCardIcon } from '../components/icons';
+import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon, IdCardIcon, DocumentTextIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import { UserProfile } from '../App';
+import MemberDetailView from './MemberDetailView';
 
 interface TrainerDashboardProps {
   user: firebase.User;
@@ -34,6 +35,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
   
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  const [viewingMember, setViewingMember] = useState<Member | null>(null);
+
   const membersSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,7 +58,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
 
     fetchMembers();
   }, [user.uid]);
-
+  
   const generateInviteLink = () => {
     const link = `${window.location.origin}/signup/coach/${user.uid}`;
     setInviteLink(link);
@@ -69,7 +72,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     }
   };
   
-  const handleEditMember = (member: Member) => {
+  const handleOpenEditModal = (member: Member) => {
     setSelectedMember(member);
     setIsEditModalOpen(true);
   };
@@ -84,9 +87,13 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
 
     try {
         await db.collection('users').doc(selectedMember.id).update(memberData);
+        const updatedMember = { ...selectedMember, ...memberData };
         setMembers(prevMembers => 
-            prevMembers.map(m => m.id === selectedMember.id ? { ...m, ...memberData } : m)
+            prevMembers.map(m => m.id === selectedMember.id ? updatedMember : m)
         );
+        if (viewingMember?.id === selectedMember.id) {
+            setViewingMember(updatedMember);
+        }
         handleCloseEditModal();
     } catch (err: any) {
         console.error("Error updating member:", err);
@@ -136,7 +143,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
   const scrollToMembers = () => {
     membersSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
+  
+  if (viewingMember) {
+      return <MemberDetailView 
+                member={viewingMember} 
+                onBack={() => setViewingMember(null)}
+                onEditProfile={() => handleOpenEditModal(viewingMember)}
+             />
+  }
 
   return (
     <>
@@ -172,7 +186,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 />
                 <button
                   onClick={copyToClipboard}
-                  className="w-full bg-secondary hover:bg-secondary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                  className="w-full bg-secondary hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
                 >
                   {copied ? '복사 완료!' : '링크 복사'}
                 </button>
@@ -202,7 +216,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
               <CalendarIcon className="w-12 h-12 text-primary mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">스케줄 관리</h2>
               <p className="text-gray-400">수업 스케줄을 확인하고 예약합니다.</p>
-              <button className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
+              <button disabled className="mt-4 bg-gray-600 text-gray-300 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
                   곧 제공될 예정입니다
               </button>
           </div>
@@ -220,12 +234,16 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                   <div className="space-y-4">
                       {members.map(member => (
                           <div key={member.id} className="p-4 bg-dark rounded-md flex flex-col sm:flex-row justify-between items-start sm:items-center border border-gray-700 gap-4">
-                            <div>
+                            <div className="flex-grow">
                                 <p className="font-semibold text-lg text-white">{member.name || '이름 미지정'}</p>
                                 <p className="text-sm text-gray-400">{member.email}</p>
                             </div>
                             <div className="flex space-x-2 flex-shrink-0">
-                                <button onClick={() => handleEditMember(member)} className="p-2 bg-primary/20 hover:bg-primary/40 rounded-md transition-colors" title="프로필 수정">
+                                <button onClick={() => setViewingMember(member)} className="p-2 bg-green-500/20 hover:bg-green-500/40 rounded-md transition-colors flex items-center space-x-2 text-sm text-green-400 font-semibold px-3">
+                                    <DocumentTextIcon className="w-5 h-5" />
+                                    <span>기록 관리</span>
+                                </button>
+                                <button onClick={() => handleOpenEditModal(member)} className="p-2 bg-primary/20 hover:bg-primary/40 rounded-md transition-colors" title="프로필 수정">
                                     <PencilIcon className="w-5 h-5 text-primary" />
                                 </button>
                                 <button onClick={() => handleDeleteMember(member)} className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-md transition-colors" title="회원 삭제">

@@ -22,6 +22,27 @@ export interface UserProfile {
   career?: string; // e.g., "10+ years of experience, Certified..."
 }
 
+export interface ExerciseSet {
+  reps: number;
+  weight: number;
+}
+
+export interface ExerciseLog {
+  id: string;
+  date: string; // ISO String for date
+  exerciseName: string;
+  sets: ExerciseSet[];
+  createdAt: firebase.firestore.Timestamp;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  date: string; // ISO String for date
+  weight?: number;
+  bodyFat?: number;
+  createdAt: firebase.firestore.Timestamp;
+}
+
 function App() {
   const [user, setUser] = useState<firebase.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
