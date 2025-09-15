@@ -1,17 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, BodyMeasurement, ExerciseLog } from '../App';
-import { UserCircleIcon, IdCardIcon, CalendarIcon, ChartBarIcon, DocumentTextIcon } from '../components/icons';
+import { UserProfile, ExerciseLog, BodyMeasurement } from '../App';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
+import MessageHistory from './MessageHistory';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
+
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages';
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
@@ -19,52 +23,47 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  const [currentView, setCurrentView] = useState<MemberDashboardView>('dashboard');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'booking'>('dashboard');
 
   useEffect(() => {
-    const fetchTrainer = async () => {
-      if (profile.trainerId) {
-        try {
-          const trainerDoc = await db.collection('users').doc(profile.trainerId).get();
-          if (trainerDoc.exists) {
-            setTrainerProfile(trainerDoc.data() as UserProfile);
-          }
-        } catch (err) {
-            console.error("Error fetching trainer profile:", err);
-            setError('트레이너 정보를 불러오는 데 실패했습니다.');
+    const fetchData = async () => {
+      setLoading(true);
+      // Fetch trainer profile
+      if (userProfile.trainerId) {
+        const trainerDoc = await db.collection('users').doc(userProfile.trainerId).get();
+        if (trainerDoc.exists) {
+          setTrainerProfile(trainerDoc.data() as UserProfile);
         }
       }
+
+      // Fetch body measurements
+      const measurementsUnsub = db.collection('users').doc(user.uid).collection('bodyMeasurements')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(snapshot => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BodyMeasurement));
+          setBodyMeasurements(data);
+        });
+
+      // Fetch exercise logs
+      const logsUnsub = db.collection('users').doc(user.uid).collection('exerciseLogs')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(snapshot => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog));
+          setExerciseLogs(data);
+        });
+
+      setLoading(false);
+
+      return () => {
+        measurementsUnsub();
+        logsUnsub();
+      };
     };
 
-    setLoading(true);
-    fetchTrainer();
-    
-    const measurementsUnsub = db.collection('users').doc(user.uid).collection('bodyMeasurements').orderBy('date', 'desc')
-      .onSnapshot(snapshot => {
-        setBodyMeasurements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BodyMeasurement)));
-        setLoading(false); // Set loading to false after first data fetch
-      }, err => {
-        console.error("Error fetching measurements:", err);
-        setError('신체 정보를 불러오는 데 실패했습니다.');
-        setLoading(false);
-      });
-    
-    const logsUnsub = db.collection('users').doc(user.uid).collection('exerciseLogs').orderBy('createdAt', 'desc').limit(5)
-      .onSnapshot(snapshot => {
-        setExerciseLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog)));
-      }, err => {
-        console.error("Error fetching exercise logs:", err);
-        // Do not set main error for this, maybe just log it.
-      });
-
-    return () => {
-      measurementsUnsub();
-      logsUnsub();
-    }
-  }, [user.uid, profile.trainerId]);
-
+    fetchData();
+  }, [user.uid, userProfile.trainerId]);
 
   const handleSaveProfile = async (profileData: Partial<UserProfile>) => {
     try {
@@ -77,9 +76,17 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
     }
   };
 
+  const handleBackToDashboard = () => setCurrentView('dashboard');
+  
   if (currentView === 'booking') {
-    return <BookingCalendar user={user} userProfile={profile} onBack={() => setCurrentView('dashboard')} />;
+    return <BookingCalendar user={user} userProfile={profile} onBack={handleBackToDashboard} />;
   }
+
+  if (currentView === 'messages') {
+      return <MessageHistory user={user} onBack={handleBackToDashboard} />;
+  }
+
+  const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <>
@@ -91,82 +98,80 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
           환영합니다, <span className="font-semibold text-secondary">{profile.name || user.email}</span> 님!
         </p>
 
-        {loading && <p>데이터를 불러오는 중...</p>}
-        {error && <p className="text-red-400">{error}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+                <div className="flex items-center mb-4">
+                    <UserCircleIcon className="w-10 h-10 text-secondary mr-4"/>
+                    <h2 className="text-xl font-bold text-white">내 정보</h2>
+                </div>
+                <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
+                <p className="text-gray-400"><strong>운동 목표:</strong> {profile.goal || '미지정'}</p>
+                <button onClick={() => setIsProfileModalOpen(true)} className="mt-auto bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
+                    내 정보 수정
+                </button>
+            </div>
 
-        {!loading && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main content */}
-            <div className="lg:col-span-2 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
-                  <CalendarIcon className="w-12 h-12 text-secondary mb-4" />
-                  <h2 className="text-xl font-bold text-white mb-2">수업 예약</h2>
-                  <p className="text-gray-400">트레이너와 수업 일정을 조율합니다.</p>
-                  <button onClick={() => setCurrentView('booking')} className="mt-4 bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                      예약 캘린더 보기
-                  </button>
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                <div className="flex items-center mb-4">
+                    <IdCardIcon className="w-10 h-10 text-secondary mr-4"/>
+                    <h2 className="text-xl font-bold text-white">담당 트레이너</h2>
                 </div>
-                <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
-                  <IdCardIcon className="w-12 h-12 text-secondary mb-4" />
-                  <h2 className="text-xl font-bold text-white mb-2">내 정보 관리</h2>
-                  <p className="text-gray-400">내 프로필과 운동 목표를 관리합니다.</p>
-                  <button onClick={() => setIsProfileModalOpen(true)} className="mt-4 bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                      내 정보 수정
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center"><ChartBarIcon className="w-6 h-6 mr-2 text-secondary"/>나의 성장 기록</h2>
-                <ProgressChart measurements={bodyMeasurements} />
-              </div>
-              
-              <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center"><DocumentTextIcon className="w-6 h-6 mr-2 text-secondary"/>최근 운동 일지</h2>
-                {exerciseLogs.length > 0 ? (
-                  <div className="space-y-4">
-                    {exerciseLogs.map(log => (
-                      <div key={log.id} className="bg-dark p-3 rounded-md">
-                         <p className="font-semibold text-gray-300">{log.date} - <span className="text-secondary">{log.exerciseName}</span></p>
-                         <ul className="list-disc list-inside mt-1 text-sm text-gray-300">
-                           {log.sets.map((s, i) => (
-                               <li key={i}>{s.weight} kg x {s.reps} 회</li>
-                           ))}
-                         </ul>
-                      </div>
-                    ))}
-                  </div>
+                {trainerProfile ? (
+                    <>
+                        <p className="text-gray-400"><strong>이름:</strong> {trainerProfile.name}</p>
+                        <p className="text-gray-400"><strong>전문 분야:</strong> {trainerProfile.specialization}</p>
+                        <p className="text-gray-400"><strong>연락처:</strong> {trainerProfile.contact}</p>
+                    </>
                 ) : (
-                  <p className="text-gray-400">아직 기록된 운동 일지가 없습니다.</p>
+                    <p className="text-gray-400">담당 트레이너가 아직 배정되지 않았습니다.</p>
                 )}
-              </div>
             </div>
 
-            {/* Side content */}
-            <div className="lg:col-span-1 space-y-8">
-              {trainerProfile ? (
-                <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                  <h2 className="text-xl font-bold text-white mb-4 flex items-center"><UserCircleIcon className="w-6 h-6 mr-2 text-secondary"/>담당 트레이너</h2>
-                  <div className="text-center">
-                      <p className="text-lg font-bold text-white">{trainerProfile.name || trainerProfile.email}</p>
-                      {trainerProfile.name && <p className="text-sm text-gray-400">{trainerProfile.email}</p>}
-                  </div>
-                  <div className="mt-4 space-y-2 text-sm text-gray-300">
-                      {trainerProfile.specialization && <p><strong className="text-gray-400 font-semibold">전문 분야:</strong> {trainerProfile.specialization}</p>}
-                      {trainerProfile.career && <p><strong className="text-gray-400 font-semibold">경력:</strong> {trainerProfile.career}</p>}
-                      {trainerProfile.contact && <p><strong className="text-gray-400 font-semibold">연락처:</strong> {trainerProfile.contact}</p>}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                  <h2 className="text-xl font-bold text-white mb-2">담당 트레이너</h2>
-                  <p className="text-gray-400">아직 담당 트레이너가 배정되지 않았습니다.</p>
-                </div>
-              )}
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col space-y-4">
+                 <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                    <CalendarIcon className="w-6 h-6 text-secondary" />
+                    <span>수업 예약하기</span>
+                </button>
+                 <button onClick={() => setCurrentView('messages')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                    <ChatBubbleIcon className="w-6 h-6 text-secondary" />
+                    <span>메시지 내역 보기</span>
+                </button>
             </div>
-          </div>
-        )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                <div className="flex items-center mb-4">
+                    <ChartBarIcon className="w-8 h-8 text-secondary mr-3" />
+                    <h2 className="text-xl font-bold text-white">나의 성장 기록</h2>
+                </div>
+                <ProgressChart measurements={sortedMeasurements} />
+            </div>
+
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                <h2 className="text-xl font-bold text-white mb-4">최근 운동 일지</h2>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {loading ? (
+                        <p className="text-gray-400">운동 일지를 불러오는 중...</p>
+                    ) : exerciseLogs.length > 0 ? (
+                        exerciseLogs.map(log => (
+                            <div key={log.id} className="bg-dark p-3 rounded-md">
+                                <p className="font-semibold text-secondary">{log.date}</p>
+                                <p className="font-bold text-white mt-1">{log.exerciseName}</p>
+                                <div className="text-sm text-gray-400 mt-1">
+                                    {log.sets.map((set, index) => (
+                                        <span key={index} className="mr-3">{set.weight}kg x {set.reps}회</span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-400">기록된 운동 일지가 없습니다.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+
       </div>
       <EditMyProfileModal
         isOpen={isProfileModalOpen}
