@@ -4,6 +4,7 @@ import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import { UserProfile } from '../App';
 
 interface TrainerDashboardProps {
@@ -21,8 +22,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const membersSectionRef = useRef<HTMLDivElement>(null);
 
@@ -61,11 +66,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
   
   const handleEditMember = (member: Member) => {
     setSelectedMember(member);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
     setSelectedMember(null);
   };
 
@@ -77,7 +82,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
         setMembers(prevMembers => 
             prevMembers.map(m => m.id === selectedMember.id ? { ...m, ...memberData } : m)
         );
-        handleCloseModal();
+        handleCloseEditModal();
     } catch (err: any) {
         console.error("Error updating member:", err);
         if (err.code === 'permission-denied' || err.code === 'PERMISSION_DENIED') {
@@ -86,6 +91,33 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
         throw new Error('서버 오류로 인해 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
+
+  const handleDeleteMember = (member: Member) => {
+    setMemberToDelete(member);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setMemberToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+        await db.collection('users').doc(memberToDelete.id).delete();
+        setMembers(prevMembers => prevMembers.filter(m => m.id !== memberToDelete.id));
+        handleCloseDeleteModal();
+    } catch (err) {
+        console.error("Error deleting member:", err);
+        // We can show an error to the user in the modal itself if we enhance it
+        alert('회원 삭제에 실패했습니다. 권한을 확인하거나 다시 시도해주세요.');
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
 
   const scrollToMembers = () => {
     membersSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -181,7 +213,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
                                 <button onClick={() => handleEditMember(member)} className="p-2 bg-primary/20 hover:bg-primary/40 rounded-md transition-colors" title="프로필 수정">
                                     <PencilIcon className="w-5 h-5 text-primary" />
                                 </button>
-                                <button className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-md transition-colors cursor-not-allowed" title="회원 삭제 (곧 제공될 예정)" disabled>
+                                <button onClick={() => handleDeleteMember(member)} className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-md transition-colors" title="회원 삭제">
                                     <TrashIcon className="w-5 h-5 text-red-400" />
                                 </button>
                             </div>
@@ -195,10 +227,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user }) => {
         </div>
       </div>
       <AddEditMemberModal 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
         onSave={handleSaveMember}
         member={selectedMember}
+      />
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+        memberName={memberToDelete?.name || memberToDelete?.email || ''}
       />
     </>
   );
