@@ -9,6 +9,8 @@ import Footer from './components/Footer';
 import AuthenticatedApp from './AuthenticatedApp';
 import UnauthenticatedApp, { Page } from './UnauthenticatedApp';
 import LoadingSpinner from './components/LoadingSpinner';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 export interface UserProfile {
   role: 'trainer' | 'member' | null;
@@ -75,6 +77,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [trainerIdFromUrl, setTrainerIdFromUrl] = useState<string | null>(null);
+  const [legalPageView, setLegalPageView] = useState<'none' | 'terms' | 'privacy'>('none');
 
   useEffect(() => {
     // Handle routing based on path
@@ -121,13 +124,23 @@ function App() {
   const handleLogout = async () => {
     setLoading(true);
     await auth.signOut();
+    setLegalPageView('none');
     window.history.pushState({}, '', '/');
   };
 
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
+    setLegalPageView('none');
     const path = page === 'landing' ? '/' : `/${page}`;
     window.history.pushState({ page }, '', path);
+  };
+  
+  const handleLegalNavigate = (page: 'terms' | 'privacy') => {
+    setLegalPageView(page);
+  };
+
+  const handleBackFromLegal = () => {
+    setLegalPageView('none');
   };
   
   // Update page on browser back/forward
@@ -155,17 +168,21 @@ function App() {
         onNavigate={!user ? handleNavigate : undefined}
       />
       <main className="flex-grow">
-        {user && userProfile ? (
-          <AuthenticatedApp user={user} userProfile={userProfile} />
-        ) : (
-          <UnauthenticatedApp 
-            currentPage={currentPage} 
-            onNavigate={handleNavigate} 
-            trainerId={trainerIdFromUrl}
-          />
+        {legalPageView === 'terms' && <TermsOfService onBack={handleBackFromLegal} />}
+        {legalPageView === 'privacy' && <PrivacyPolicy onBack={handleBackFromLegal} />}
+        {legalPageView === 'none' && (
+            user && userProfile ? (
+            <AuthenticatedApp user={user} userProfile={userProfile} />
+            ) : (
+            <UnauthenticatedApp 
+                currentPage={currentPage} 
+                onNavigate={handleNavigate} 
+                trainerId={trainerIdFromUrl}
+            />
+            )
         )}
       </main>
-      <Footer />
+      <Footer onNavigate={handleLegalNavigate} />
     </div>
   );
 }

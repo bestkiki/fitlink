@@ -2,7 +2,11 @@
 import React from 'react';
 import { DumbbellIcon } from './icons';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+    onNavigate: (page: 'terms' | 'privacy') => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     return (
         <footer className="bg-dark-accent border-t border-gray-700">
             <div className="container mx-auto px-6 py-8">
@@ -15,8 +19,8 @@ const Footer: React.FC = () => {
                         &copy; {new Date().getFullYear()} FitLink. All rights reserved.
                     </div>
                     <div className="flex space-x-4 mt-4 md:mt-0">
-                        <a href="#" className="text-gray-400 hover:text-white transition-colors">이용약관</a>
-                        <a href="#" className="text-gray-400 hover:text-white transition-colors">개인정보처리방침</a>
+                        <button onClick={() => onNavigate('terms')} className="text-gray-400 hover:text-white transition-colors">이용약관</button>
+                        <button onClick={() => onNavigate('privacy')} className="text-gray-400 hover:text-white transition-colors">개인정보처리방침</button>
                     </div>
                 </div>
             </div>
