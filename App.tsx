@@ -38,12 +38,21 @@ export interface ExerciseLog {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface Feedback {
+  id: string;
+  text: string;
+  trainerId: string;
+  trainerName: string;
+  createdAt: firebase.firestore.Timestamp;
+}
+
 export interface PersonalExerciseLog {
   id: string;
   date: string; // ISO String for date
   exerciseName: string;
   sets: ExerciseSet[];
   createdAt: firebase.firestore.Timestamp;
+  feedback?: Feedback[];
 }
 
 export interface BodyMeasurement {
@@ -73,6 +82,7 @@ export interface DietLog {
   };
   totalCalories: number;
   updatedAt: firebase.firestore.Timestamp;
+  feedback?: Feedback[];
 }
 
 export interface Availability {

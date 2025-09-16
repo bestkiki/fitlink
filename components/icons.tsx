@@ -106,3 +106,9 @@ export const FireIcon: React.FC<IconProps> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 3.75 3.75 0 001.43 3.921z" />
     </svg>
 );
+
+export const ChatBubbleLeftRightIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72-3.72a1.063 1.063 0 00-1.5 1.5l3.72 3.72c-1.093.143-2.193-.847-2.193-1.98V15.25c0-.414.168-.79.44-1.06l.44-.44a1.5 1.5 0 01-2.12-2.12l-.44.44c-.27.27-.646.44-1.06.44H9.75a1.5 1.5 0 01-1.5-1.5V7.75c0-.414.168-.79.44-1.06l.44-.44a1.5 1.5 0 012.12 0l.44.44c.27.27.646.44 1.06.44h2.88c.969 0 1.813-.616 2.097-1.5M6.25 9.75A.75.75 0 017 9h4.5a.75.75 0 010 1.5H7a.75.75 0 01-.75-.75zm0 2.25A.75.75 0 017 12h4.5a.75.75 0 010 1.5H7a.75.75 0 01-.75-.75zm0 2.25A.75.75 0 017 14.25h4.5a.75.75 0 010 1.5H7a.75.75 0 01-.75-.75z" />
+    </svg>
+);

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
-import { db } from '../firebase';
+// FIX: Import auth from firebase to get current user for feedback.
+import { db, auth } from '../firebase';
 import { Member } from './TrainerDashboard';
-import { ExerciseLog, BodyMeasurement, ExerciseSet, DietLog, FoodItem, MealType } from '../App';
-import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DocumentTextIcon, FireIcon } from '../components/icons';
+import { ExerciseLog, BodyMeasurement, ExerciseSet, DietLog, MealType, PersonalExerciseLog, Feedback } from '../App';
+import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DocumentTextIcon, FireIcon, ClipboardListIcon, ChatBubbleLeftRightIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import ProgressChart from '../components/ProgressChart';
 
@@ -169,6 +170,46 @@ const AddEditBodyMeasurementModal: React.FC<AddEditBodyMeasurementModalProps> = 
     );
 };
 
+const FeedbackSection: React.FC<{
+    logId: string;
+    feedback: Feedback[];
+    onSave: (feedbackText: string) => void;
+}> = ({ logId, feedback, onSave }) => {
+    const [newFeedback, setNewFeedback] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newFeedback.trim()) return;
+        setIsSubmitting(true);
+        await onSave(newFeedback);
+        setNewFeedback('');
+        setIsSubmitting(false);
+    };
+
+    return (
+        <div className="mt-2 pt-2 border-t border-gray-700/50">
+            {feedback.map(fb => (
+                <div key={fb.id} className="text-xs text-gray-400 mt-1 pl-2">
+                    <span className="font-semibold text-primary">{fb.trainerName}:</span> {fb.text}
+                </div>
+            ))}
+            <form onSubmit={handleSubmit} className="flex items-center space-x-2 mt-2">
+                <input
+                    type="text"
+                    value={newFeedback}
+                    onChange={(e) => setNewFeedback(e.target.value)}
+                    placeholder="피드백을 남겨주세요..."
+                    className="w-full bg-dark-accent text-sm p-1.5 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button type="submit" disabled={isSubmitting} className="bg-primary text-white text-sm px-3 py-1.5 rounded-md hover:bg-primary-dark disabled:opacity-50">
+                    전송
+                </button>
+            </form>
+        </div>
+    );
+};
+
 
 // --- MAIN COMPONENT ---
 interface MemberDetailViewProps {
@@ -179,9 +220,10 @@ interface MemberDetailViewProps {
 
 const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onEditProfile }) => {
     const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
+    const [personalExerciseLogs, setPersonalExerciseLogs] = useState<PersonalExerciseLog[]>([]);
     const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
     const [dietLogs, setDietLogs] = useState<DietLog[]>([]);
-    const [loading, setLoading] = useState({ logs: true, measurements: true, diet: true });
+    const [loading, setLoading] = useState({ logs: true, measurements: true, diet: true, personalLogs: true });
 
     const [isExerciseLogModalOpen, setIsExerciseLogModalOpen] = useState(false);
     const [editingExerciseLog, setEditingExerciseLog] = useState<ExerciseLog | null>(null);
@@ -192,27 +234,89 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
     useEffect(() => {
         const memberRef = db.collection('users').doc(member.id);
 
+        const fetchWithFeedback = async <T extends { id: string }>(
+            collectionName: string,
+            orderByField: string = 'createdAt'
+        ): Promise<T[]> => {
+            const snapshot = await memberRef.collection(collectionName).orderBy(orderByField, 'desc').get();
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+            
+            const itemsWithFeedback = await Promise.all(items.map(async item => {
+                const feedbackSnap = await memberRef.collection(collectionName).doc(item.id).collection('feedback').orderBy('createdAt', 'asc').get();
+                const feedback = feedbackSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback));
+                return { ...item, feedback };
+            }));
+            
+            return itemsWithFeedback;
+        };
+
         const unsubLogs = memberRef.collection('exerciseLogs').orderBy('createdAt', 'desc').onSnapshot(snap => {
             setExerciseLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog)));
             setLoading(l => ({ ...l, logs: false }));
         });
-
+        
         const unsubMeasurements = memberRef.collection('bodyMeasurements').orderBy('createdAt', 'desc').onSnapshot(snap => {
             setBodyMeasurements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BodyMeasurement)));
             setLoading(l => ({ ...l, measurements: false }));
         });
         
-        const unsubDiet = memberRef.collection('dietLogs').orderBy('date', 'desc').limit(7).onSnapshot(snap => {
-            setDietLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as DietLog)));
+        fetchWithFeedback<PersonalExerciseLog>('personalExerciseLogs').then(data => {
+            setPersonalExerciseLogs(data);
+            setLoading(l => ({...l, personalLogs: false}));
+        });
+
+        fetchWithFeedback<DietLog>('dietLogs', 'date').then(data => {
+            setDietLogs(data);
             setLoading(l => ({...l, diet: false}));
         });
+
 
         return () => {
             unsubLogs();
             unsubMeasurements();
-            unsubDiet();
         };
     }, [member.id]);
+
+    const handleSaveFeedback = async (
+        logType: 'personalExerciseLogs' | 'dietLogs',
+        logId: string,
+        feedbackText: string
+    ) => {
+        const trainer = auth.currentUser;
+        if (!trainer) return;
+
+        try {
+            const feedbackRef = db.collection('users').doc(member.id).collection(logType).doc(logId).collection('feedback');
+            await feedbackRef.add({
+                text: feedbackText,
+                trainerId: trainer.uid,
+                trainerName: trainer.displayName || trainer.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            await db.collection('notifications').add({
+                userId: member.id,
+                message: `트레이너가 당신의 기록에 피드백을 남겼습니다: "${feedbackText.substring(0, 20)}..."`,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Refresh data locally
+            const feedbackSnap = await feedbackRef.orderBy('createdAt', 'asc').get();
+            const newFeedbackList = feedbackSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Feedback));
+
+            if (logType === 'personalExerciseLogs') {
+                setPersonalExerciseLogs(prev => prev.map(log => log.id === logId ? {...log, feedback: newFeedbackList} : log));
+            } else {
+                setDietLogs(prev => prev.map(log => log.id === logId ? {...log, feedback: newFeedbackList} : log));
+            }
+
+        } catch (error) {
+            console.error("Error saving feedback:", error);
+            alert("피드백 저장에 실패했습니다.");
+        }
+    };
+
 
     const handleOpenExerciseLogModal = (log: ExerciseLog | null) => {
         setEditingExerciseLog(log);
@@ -341,7 +445,7 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     {/* Exercise Logs */}
                     <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-white flex items-center"><DocumentTextIcon className="w-6 h-6 mr-3 text-primary"/>운동 일지</h2>
+                            <h2 className="text-xl font-bold text-white flex items-center"><DocumentTextIcon className="w-6 h-6 mr-3 text-primary"/>트레이너 할당 운동</h2>
                             <button onClick={() => handleOpenExerciseLogModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
                                 <PlusCircleIcon className="w-5 h-5"/>
                                 <span>일지 추가</span>
@@ -369,33 +473,61 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     </div>
                 </div>
 
-                {/* Diet Logs */}
-                <div className="mt-8 bg-dark-accent p-6 rounded-lg shadow-lg">
-                    <h2 className="text-xl font-bold text-white mb-4 flex items-center"><FireIcon className="w-6 h-6 mr-3 text-primary"/>최근 식단 기록</h2>
-                    <div className="space-y-6">
-                        {loading.diet ? <p>로딩 중...</p> : dietLogs.length > 0 ? dietLogs.map(log => (
-                            <div key={log.id} className="bg-dark p-4 rounded-lg">
-                                <div className="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
-                                    <h3 className="font-bold text-primary">{log.date}</h3>
-                                    <p className="text-lg font-bold text-primary">{log.totalCalories} kcal</p>
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Personal Exercise Logs */}
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center"><ClipboardListIcon className="w-6 h-6 mr-3 text-primary"/>회원 개인 운동 기록</h2>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                           {loading.personalLogs ? <p>로딩 중...</p> : personalExerciseLogs.length > 0 ? personalExerciseLogs.map(log => (
+                                <div key={log.id} className="bg-dark p-3 rounded-md">
+                                    <p className="font-semibold text-primary">{log.date}</p>
+                                    <p className="font-bold text-white mt-1">{log.exerciseName}</p>
+                                    <div className="text-sm text-gray-400 mt-1 mb-2">
+                                        {log.sets.map((set, i) => <span key={i} className="mr-3">{set.weight}kg x {set.reps}회</span>)}
+                                    </div>
+                                    <FeedbackSection 
+                                        logId={log.id}
+                                        feedback={log.feedback || []}
+                                        onSave={(text) => handleSaveFeedback('personalExerciseLogs', log.id, text)}
+                                    />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    {mealTypes.map(meal => (
-                                        <div key={meal.key}>
-                                            <h4 className="font-semibold text-gray-300 mb-1">{meal.name}</h4>
-                                            {log.meals[meal.key] && log.meals[meal.key].length > 0 ? (
-                                                log.meals[meal.key].map(food => (
-                                                    <div key={food.id} className="flex justify-between text-gray-400">
-                                                        <span>{food.foodName}</span>
-                                                        <span>{food.calories} kcal</span>
-                                                    </div>
-                                                ))
-                                            ) : <p className="text-xs text-gray-500">기록 없음</p>}
-                                        </div>
-                                    ))}
+                            )) : <p className="text-gray-400">회원이 기록한 개인 운동이 없습니다.</p>}
+                        </div>
+                    </div>
+
+                    {/* Diet Logs */}
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center"><FireIcon className="w-6 h-6 mr-3 text-primary"/>최근 식단 기록</h2>
+                        <div className="space-y-6 max-h-96 overflow-y-auto">
+                            {loading.diet ? <p>로딩 중...</p> : dietLogs.length > 0 ? dietLogs.map(log => (
+                                <div key={log.id} className="bg-dark p-4 rounded-lg">
+                                    <div className="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                                        <h3 className="font-bold text-primary">{log.date}</h3>
+                                        <p className="text-lg font-bold text-primary">{log.totalCalories} kcal</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-2">
+                                        {mealTypes.map(meal => (
+                                            <div key={meal.key}>
+                                                <h4 className="font-semibold text-gray-300 mb-1">{meal.name}</h4>
+                                                {log.meals[meal.key] && log.meals[meal.key].length > 0 ? (
+                                                    log.meals[meal.key].map(food => (
+                                                        <div key={food.id} className="flex justify-between text-gray-400">
+                                                            <span>{food.foodName}</span>
+                                                            <span>{food.calories} kcal</span>
+                                                        </div>
+                                                    ))
+                                                ) : <p className="text-xs text-gray-500">기록 없음</p>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                     <FeedbackSection 
+                                        logId={log.id}
+                                        feedback={log.feedback || []}
+                                        onSave={(text) => handleSaveFeedback('dietLogs', log.id, text)}
+                                    />
                                 </div>
-                            </div>
-                        )) : <p className="text-gray-400">식단 기록이 없습니다.</p>}
+                            )) : <p className="text-gray-400">식단 기록이 없습니다.</p>}
+                        </div>
                     </div>
                 </div>
             </div>

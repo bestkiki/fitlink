@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon } from '../components/icons';
+import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback } from '../App';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -79,21 +79,31 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   }, [user.uid, userProfile.trainerId]);
 
   useEffect(() => {
-    // Fetch personal exercise logs
-    const personalLogsUnsub = db.collection('users').doc(user.uid).collection('personalExerciseLogs')
+    const userRef = db.collection('users').doc(user.uid);
+
+    // Fetch personal exercise logs with feedback
+    const personalLogsUnsub = userRef.collection('personalExerciseLogs')
         .orderBy('createdAt', 'desc')
-        .onSnapshot(snapshot => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PersonalExerciseLog));
-            setPersonalExerciseLogs(data);
+        .onSnapshot(async (snapshot) => {
+            const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PersonalExerciseLog));
+            const logsWithFeedback = await Promise.all(logsData.map(async log => {
+                const feedbackSnap = await userRef.collection('personalExerciseLogs').doc(log.id).collection('feedback').orderBy('createdAt', 'asc').get();
+                const feedback = feedbackSnap.docs.map(fbDoc => ({ id: fbDoc.id, ...fbDoc.data() } as Feedback));
+                return { ...log, feedback };
+            }));
+            setPersonalExerciseLogs(logsWithFeedback);
             setLoading(prev => ({ ...prev, personalLogs: false }));
         });
     
-    // Fetch today's diet log
+    // Fetch today's diet log with feedback
     const todayStr = new Date().toISOString().split('T')[0];
-    const dietLogUnsub = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr)
-        .onSnapshot(doc => {
+    const dietLogUnsub = userRef.collection('dietLogs').doc(todayStr)
+        .onSnapshot(async (doc) => {
             if(doc.exists) {
-                setDietLog({ id: doc.id, ...doc.data() } as DietLog);
+                const dietData = { id: doc.id, ...doc.data() } as DietLog;
+                const feedbackSnap = await userRef.collection('dietLogs').doc(doc.id).collection('feedback').orderBy('createdAt', 'asc').get();
+                const feedback = feedbackSnap.docs.map(fbDoc => ({ id: fbDoc.id, ...fbDoc.data() } as Feedback));
+                setDietLog({ ...dietData, feedback });
             } else {
                 setDietLog(null);
             }
@@ -296,35 +306,47 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                         <p className="text-sm text-gray-400">kcal</p>
                     </div>
                 </div>
-                <div className="space-y-4 max-h-80 overflow-y-auto">
+                <div className="space-y-4 max-h-[22rem] overflow-y-auto pr-2">
                     {loading.dietLog ? (
                         <p className="text-gray-400">식단 기록을 불러오는 중...</p>
                     ) : (
-                        mealTypes.map(meal => (
-                            <div key={meal.key}>
-                                <div className="flex justify-between items-center mb-1">
-                                    <h3 className="font-semibold text-gray-300">{meal.name}</h3>
-                                    <button onClick={() => handleOpenDietModal(meal.key)} className="p-1 text-secondary hover:text-orange-400">
-                                        <PlusCircleIcon className="w-5 h-5"/>
-                                    </button>
-                                </div>
-                                <div className="space-y-1 text-sm">
-                                    {dietLog?.meals[meal.key] && dietLog.meals[meal.key].length > 0 ? (
-                                        dietLog.meals[meal.key].map(food => (
-                                            <div key={food.id} className="flex justify-between items-center bg-dark p-2 rounded">
-                                                <span className="text-gray-300">{food.foodName}</span>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-gray-400">{food.calories} kcal</span>
-                                                    <button onClick={() => handleDeleteFoodItem(meal.key, food)} className="p-0.5"><TrashIcon className="w-4 h-4 text-gray-500 hover:text-red-400"/></button>
+                        <>
+                            {mealTypes.map(meal => (
+                                <div key={meal.key}>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <h3 className="font-semibold text-gray-300">{meal.name}</h3>
+                                        <button onClick={() => handleOpenDietModal(meal.key)} className="p-1 text-secondary hover:text-orange-400">
+                                            <PlusCircleIcon className="w-5 h-5"/>
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1 text-sm">
+                                        {dietLog?.meals[meal.key] && dietLog.meals[meal.key].length > 0 ? (
+                                            dietLog.meals[meal.key].map(food => (
+                                                <div key={food.id} className="flex justify-between items-center bg-dark p-2 rounded">
+                                                    <span className="text-gray-300">{food.foodName}</span>
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-gray-400">{food.calories} kcal</span>
+                                                        <button onClick={() => handleDeleteFoodItem(meal.key, food)} className="p-0.5"><TrashIcon className="w-4 h-4 text-gray-500 hover:text-red-400"/></button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-xs text-gray-500 px-2">기록된 {meal.name} 식단이 없습니다.</p>
-                                    )}
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-gray-500 px-2">기록된 {meal.name} 식단이 없습니다.</p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                            {dietLog?.feedback && dietLog.feedback.length > 0 && (
+                                <div className="pt-2 border-t border-gray-700">
+                                    <h3 className="font-semibold text-gray-300 mb-1 flex items-center text-sm"><ChatBubbleLeftRightIcon className="w-4 h-4 mr-2 text-secondary"/>트레이너 피드백</h3>
+                                    {dietLog.feedback.map(fb => (
+                                        <div key={fb.id} className="text-xs bg-dark p-2 rounded">
+                                            <p className="text-gray-300">{fb.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
@@ -382,6 +404,16 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                                             <span key={index} className="mr-3">{set.weight}kg x {set.reps}회</span>
                                         ))}
                                     </div>
+                                    {log.feedback && log.feedback.length > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-gray-700/50">
+                                            {log.feedback.map(fb => (
+                                                <div key={fb.id} className="text-xs flex items-start mt-1">
+                                                    <ChatBubbleLeftRightIcon className="w-4 h-4 mr-2 mt-0.5 text-secondary flex-shrink-0"/>
+                                                    <p className="text-gray-300"><span className="font-semibold text-secondary">{fb.trainerName}:</span> {fb.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))
                         ) : (
