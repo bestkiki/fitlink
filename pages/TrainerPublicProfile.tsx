@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth, firebaseConfig } from '../firebase';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
+import { db } from '../firebase';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { UserCircleIcon, IdCardIcon, DumbbellIcon } from '../components/icons';
@@ -12,98 +9,37 @@ interface TrainerPublicProfileProps {
     onNavigateToSignup: (trainerId: string) => void;
 }
 
-// --- Singleton pattern for the temporary Firebase app ---
-let tempApp: firebase.app.App | null = null;
-let tempAppPromise: Promise<firebase.app.App> | null = null;
-
-const getTempApp = (): Promise<firebase.app.App> => {
-    if (tempApp) {
-        return Promise.resolve(tempApp);
-    }
-    if (tempAppPromise) {
-        return tempAppPromise;
-    }
-
-    tempAppPromise = new Promise(async (resolve, reject) => {
-        try {
-            const tempAppName = `public-profile-viewer-${Math.random().toString(36).substring(2, 9)}`;
-            const app = firebase.initializeApp(firebaseConfig, tempAppName);
-            const tempAuth = app.auth();
-            await tempAuth.signInAnonymously();
-            tempApp = app;
-            resolve(app);
-        } catch (error) {
-            console.error("Failed to initialize and sign in to temporary app:", error);
-            tempAppPromise = null; // Reset promise on failure
-            reject(error);
-        }
-    });
-
-    return tempAppPromise;
-};
-// --- End of Singleton pattern ---
-
-
 const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, onNavigateToSignup }) => {
     const [trainerProfile, setTrainerProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        let isMounted = true;
-
         const fetchTrainerProfile = async () => {
             setLoading(true);
             setError(null);
             try {
-                // First, try with the default instance (for logged-in users).
                 const doc = await db.collection('users').doc(trainerId).get();
+                
                 if (doc.exists) {
                     const data = doc.data() as UserProfile;
                     if (data.role === 'trainer') {
-                        if (isMounted) setTrainerProfile(data);
+                        setTrainerProfile(data);
                     } else {
-                        if (isMounted) setError('해당 사용자는 트레이너가 아닙니다.');
+                        setError('해당 사용자는 트레이너가 아닙니다.');
                     }
                 } else {
-                    if (isMounted) setError('트레이너 프로필을 찾을 수 없습니다.');
+                    setError('트레이너 프로필을 찾을 수 없습니다.');
                 }
-            } catch (err: any) {
-                // If permission is denied and user is not logged in, use the temporary app.
-                if ((err.code === 'permission-denied' || err.code === 'PERMISSION_DENIED') && !auth.currentUser) {
-                    try {
-                        const app = await getTempApp();
-                        const tempDb = app.firestore();
-                        const doc = await tempDb.collection('users').doc(trainerId).get();
-
-                        if (doc.exists) {
-                            const data = doc.data() as UserProfile;
-                            if (data.role === 'trainer') {
-                                if (isMounted) setTrainerProfile(data);
-                            } else {
-                                if (isMounted) setError('해당 사용자는 트레이너가 아닙니다.');
-                            }
-                        } else {
-                            if (isMounted) setError('트레이너 프로필을 찾을 수 없습니다.');
-                        }
-                    } catch (tempErr) {
-                        console.error("Error fetching trainer profile with temp auth:", tempErr);
-                        if (isMounted) setError('프로필을 불러오는 중 오류가 발생했습니다. 페이지를 새로고침 해주세요.');
-                    }
-                } else {
-                    console.error("Error fetching trainer profile:", err);
-                    if (isMounted) setError('프로필을 불러오는 중 오류가 발생했습니다.');
-                }
+            } catch (err) {
+                console.error("Error fetching trainer profile:", err);
+                setError('프로필을 불러오는 중 오류가 발생했습니다. 페이지를 새로고침 해주세요.');
             } finally {
-                if (isMounted) setLoading(false);
+                setLoading(false);
             }
         };
 
         fetchTrainerProfile();
-
-        return () => {
-            isMounted = false;
-        };
     }, [trainerId]);
 
     if (loading) {
