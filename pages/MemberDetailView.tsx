@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { Member } from './TrainerDashboard';
-import { ExerciseLog, BodyMeasurement, ExerciseSet, Notification } from '../App';
+import { ExerciseLog, BodyMeasurement, ExerciseSet } from '../App';
 import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DumbbellIcon, ChatBubbleIcon, ClockIcon } from '../components/icons';
 import ProgressChart from '../components/ProgressChart';
 import Modal from '../components/Modal';
@@ -17,7 +17,7 @@ interface MemberDetailViewProps {
 const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onEditProfile }) => {
     const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
     const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
-    const [messageHistory, setMessageHistory] = useState<Notification[]>([]);
+    const [messageHistory, setMessageHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState({ logs: true, measurements: true, history: true });
 
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -45,13 +45,15 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                 setLoading(prev => ({ ...prev, measurements: false }));
             });
 
-        const historyUnsub = db.collection('notifications')
-            .where('userId', '==', member.id)
+        const historyUnsub = db.collection('users').doc(member.id).collection('messages')
             .orderBy('createdAt', 'desc')
             .onSnapshot(snapshot => {
-                const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+                const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setMessageHistory(history);
                 setLoading(prev => ({ ...prev, history: false }));
+            }, (error) => {
+                console.error("Error fetching message history:", error);
+                setLoading(prev => ({...prev, history: false}));
             });
         
         return () => {
@@ -65,12 +67,30 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
         if (!messageText.trim()) return;
         setIsSending(true);
         try {
-            await db.collection('notifications').add({
+            const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+            const fullMessage = `트레이너 메시지: "${messageText.trim()}"`;
+            
+            const batch = db.batch();
+
+            // For member's notification bell
+            const notificationRef = db.collection('notifications').doc();
+            batch.set(notificationRef, {
                 userId: member.id,
-                message: `트레이너 메시지: "${messageText.trim()}"`,
+                message: fullMessage,
                 read: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: timestamp,
             });
+
+            // For trainer's history view
+            const messageRef = db.collection('users').doc(member.id).collection('messages').doc();
+            batch.set(messageRef, {
+                message: fullMessage,
+                senderId: firebase.auth().currentUser?.uid,
+                createdAt: timestamp,
+            });
+            
+            await batch.commit();
+
             setMessageText('');
             setSendSuccess(true);
             setTimeout(() => setSendSuccess(false), 3000);
