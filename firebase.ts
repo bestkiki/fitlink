@@ -1,11 +1,10 @@
-
 // FIX: Updated Firebase imports to use v9 compat libraries to resolve property errors.
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyANDlWJAY5l7E9iL6BYWyP1GsTwx7N1rAk",
   authDomain: "fitlink-a12fd.firebaseapp.com",
   projectId: "fitlink-a12fd",

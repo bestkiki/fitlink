@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { db, auth, firebaseConfig } from '../firebase';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { UserCircleIcon, IdCardIcon, DumbbellIcon } from '../components/icons';
@@ -19,6 +22,7 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
             setLoading(true);
             setError(null);
             try {
+                // First, try with the default instance. This will work for logged-in users with permission.
                 const doc = await db.collection('users').doc(trainerId).get();
                 if (doc.exists) {
                     const data = doc.data() as UserProfile;
@@ -30,9 +34,43 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                 } else {
                     setError('트레이너 프로필을 찾을 수 없습니다.');
                 }
-            } catch (err) {
-                console.error("Error fetching trainer profile:", err);
-                setError('프로필을 불러오는 중 오류가 발생했습니다.');
+            } catch (err: any) {
+                // If it fails with permission denied, and we are logged out, try with an anonymous user on a temporary app instance.
+                if ((err.code === 'permission-denied' || err.code === 'PERMISSION_DENIED') && !auth.currentUser) {
+                    const tempAppName = 'public-profile-fetch';
+                    let tempApp;
+                    try {
+                        tempApp = firebase.app(tempAppName);
+                    } catch (e) {
+                        tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
+                    }
+
+                    try {
+                        const tempAuth = tempApp.auth();
+                        if (!tempAuth.currentUser) {
+                           await tempAuth.signInAnonymously();
+                        }
+                        const tempDb = tempApp.firestore();
+                        const doc = await tempDb.collection('users').doc(trainerId).get();
+
+                        if (doc.exists) {
+                            const data = doc.data() as UserProfile;
+                            if (data.role === 'trainer') {
+                                setTrainerProfile(data);
+                            } else {
+                                setError('해당 사용자는 트레이너가 아닙니다.');
+                            }
+                        } else {
+                            setError('트레이너 프로필을 찾을 수 없습니다.');
+                        }
+                    } catch (tempErr) {
+                        console.error("Error fetching trainer profile with temp auth:", tempErr);
+                        setError('프로필을 불러오는 중 오류가 발생했습니다.');
+                    }
+                } else {
+                    console.error("Error fetching trainer profile:", err);
+                    setError('프로필을 불러오는 중 오류가 발생했습니다.');
+                }
             } finally {
                 setLoading(false);
             }
