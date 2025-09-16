@@ -3,11 +3,174 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { Member } from './TrainerDashboard';
-import { ExerciseLog, BodyMeasurement, ExerciseSet } from '../App';
-import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DumbbellIcon, ChatBubbleIcon, ClockIcon } from '../components/icons';
-import ProgressChart from '../components/ProgressChart';
+import { ExerciseLog, BodyMeasurement, ExerciseSet, DietLog, FoodItem, MealType } from '../App';
+import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DocumentTextIcon, FireIcon } from '../components/icons';
 import Modal from '../components/Modal';
+import ProgressChart from '../components/ProgressChart';
 
+// --- MODAL COMPONENTS (defined inside to avoid new files) ---
+
+// Add/Edit Exercise Log Modal
+interface AddEditExerciseLogModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (logData: Omit<ExerciseLog, 'id' | 'createdAt'>) => Promise<void>;
+    log: ExerciseLog | null;
+}
+
+const AddEditExerciseLogModal: React.FC<AddEditExerciseLogModalProps> = ({ isOpen, onClose, onSave, log }) => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [exerciseName, setExerciseName] = useState('');
+    const [sets, setSets] = useState<ExerciseSet[]>([{ reps: 10, weight: 0 }]);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (log) {
+            setDate(log.date);
+            setExerciseName(log.exerciseName);
+            setSets(log.sets && log.sets.length > 0 ? log.sets : [{ reps: 10, weight: 0 }]);
+        } else {
+            setDate(new Date().toISOString().split('T')[0]);
+            setExerciseName('');
+            setSets([{ reps: 10, weight: 0 }]);
+        }
+        setIsSaving(false);
+    }, [log, isOpen]);
+
+    const handleSetChange = (index: number, field: keyof ExerciseSet, value: number) => {
+        const newSets = [...sets];
+        newSets[index] = { ...newSets[index], [field]: Math.max(0, value) };
+        setSets(newSets);
+    };
+
+    const addSet = () => {
+        const lastSet = sets[sets.length - 1] || { reps: 10, weight: 0 };
+        setSets([...sets, { ...lastSet }]);
+    };
+
+    const removeSet = (index: number) => {
+        if (sets.length > 1) {
+            setSets(sets.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!exerciseName.trim()) {
+            alert('운동 이름을 입력해주세요.');
+            return;
+        }
+        setIsSaving(true);
+        await onSave({ date, exerciseName: exerciseName.trim(), sets });
+        setIsSaving(false);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={log ? "운동 기록 수정" : "운동 기록 추가"}>
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">날짜</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"/>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">운동 이름</label>
+                    <input type="text" value={exerciseName} onChange={e => setExerciseName(e.target.value)} placeholder="예: 스쿼트" className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"/>
+                </div>
+                <div>
+                     <label className="block text-sm font-medium text-gray-300 mb-2">세트</label>
+                     <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        {sets.map((set, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                                <span className="text-gray-400 font-mono w-6">{index+1}.</span>
+                                <input type="number" placeholder="무게" value={set.weight} onChange={e => handleSetChange(index, 'weight', +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 text-center" />
+                                <span className="text-gray-400">kg</span>
+                                <input type="number" placeholder="횟수" value={set.reps} onChange={e => handleSetChange(index, 'reps', +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 text-center" />
+                                <span className="text-gray-400">회</span>
+                                <button onClick={() => removeSet(index)} className="p-2 bg-dark hover:bg-red-500/20 rounded-full transition-colors"><TrashIcon className="w-5 h-5 text-gray-500 hover:text-red-400"/></button>
+                            </div>
+                        ))}
+                     </div>
+                     <button onClick={addSet} className="mt-3 text-primary text-sm font-semibold hover:underline">+ 세트 추가</button>
+                </div>
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                    <button onClick={onClose} disabled={isSaving} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">취소</button>
+                    <button onClick={handleSubmit} disabled={isSaving} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
+                        {isSaving ? '저장 중...' : '저장'}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+// Add/Edit Body Measurement Modal
+interface AddEditBodyMeasurementModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (measurementData: Omit<BodyMeasurement, 'id' | 'createdAt'>) => Promise<void>;
+    measurement: BodyMeasurement | null;
+}
+
+const AddEditBodyMeasurementModal: React.FC<AddEditBodyMeasurementModalProps> = ({ isOpen, onClose, onSave, measurement }) => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [weight, setWeight] = useState<number | ''>('');
+    const [bodyFat, setBodyFat] = useState<number | ''>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (measurement) {
+            setDate(measurement.date);
+            setWeight(measurement.weight ?? '');
+            setBodyFat(measurement.bodyFat ?? '');
+        } else {
+            setDate(new Date().toISOString().split('T')[0]);
+            setWeight('');
+            setBodyFat('');
+        }
+        setIsSaving(false);
+    }, [measurement, isOpen]);
+
+    const handleSubmit = async () => {
+        if (weight === '' && bodyFat === '') {
+            alert('체중 또는 체지방률 중 하나는 입력해야 합니다.');
+            return;
+        }
+        setIsSaving(true);
+        await onSave({
+            date,
+            weight: weight !== '' ? Number(weight) : undefined,
+            bodyFat: bodyFat !== '' ? Number(bodyFat) : undefined
+        });
+        setIsSaving(false);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={measurement ? "신체 정보 수정" : "신체 정보 추가"}>
+             <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">측정일</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"/>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">체중 (kg)</label>
+                    <input type="number" value={weight} onChange={e => setWeight(e.target.value === '' ? '' : +e.target.value)} placeholder="예: 75.5" className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"/>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">체지방률 (%)</label>
+                    <input type="number" value={bodyFat} onChange={e => setBodyFat(e.target.value === '' ? '' : +e.target.value)} placeholder="예: 15.2" className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"/>
+                </div>
+                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                    <button onClick={onClose} disabled={isSaving} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">취소</button>
+                    <button onClick={handleSubmit} disabled={isSaving} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">
+                        {isSaving ? '저장 중...' : '저장'}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+
+// --- MAIN COMPONENT ---
 interface MemberDetailViewProps {
     member: Member;
     onBack: () => void;
@@ -17,152 +180,103 @@ interface MemberDetailViewProps {
 const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onEditProfile }) => {
     const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
     const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
-    const [messageHistory, setMessageHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState({ logs: true, measurements: true, history: true });
+    const [dietLogs, setDietLogs] = useState<DietLog[]>([]);
+    const [loading, setLoading] = useState({ logs: true, measurements: true, diet: true });
 
-    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+    const [isExerciseLogModalOpen, setIsExerciseLogModalOpen] = useState(false);
+    const [editingExerciseLog, setEditingExerciseLog] = useState<ExerciseLog | null>(null);
+
     const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
-    const [editingLog, setEditingLog] = useState<ExerciseLog | null>(null);
-
-    const [messageText, setMessageText] = useState('');
-    const [isSending, setIsSending] = useState(false);
-    const [sendSuccess, setSendSuccess] = useState(false);
+    const [editingMeasurement, setEditingMeasurement] = useState<BodyMeasurement | null>(null);
 
     useEffect(() => {
-        const logUnsub = db.collection('users').doc(member.id).collection('exerciseLogs')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog));
-                setExerciseLogs(data);
-                setLoading(prev => ({ ...prev, logs: false }));
-            });
+        const memberRef = db.collection('users').doc(member.id);
 
-        const measurementUnsub = db.collection('users').doc(member.id).collection('bodyMeasurements')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BodyMeasurement));
-                setBodyMeasurements(data);
-                setLoading(prev => ({ ...prev, measurements: false }));
-            });
+        const unsubLogs = memberRef.collection('exerciseLogs').orderBy('createdAt', 'desc').onSnapshot(snap => {
+            setExerciseLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog)));
+            setLoading(l => ({ ...l, logs: false }));
+        });
 
-        const historyUnsub = db.collection('users').doc(member.id).collection('messages')
-            .orderBy('createdAt', 'desc')
-            .onSnapshot(snapshot => {
-                const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setMessageHistory(history);
-                setLoading(prev => ({ ...prev, history: false }));
-            }, (error) => {
-                console.error("Error fetching message history:", error);
-                setLoading(prev => ({...prev, history: false}));
-            });
+        const unsubMeasurements = memberRef.collection('bodyMeasurements').orderBy('createdAt', 'desc').onSnapshot(snap => {
+            setBodyMeasurements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BodyMeasurement)));
+            setLoading(l => ({ ...l, measurements: false }));
+        });
         
+        const unsubDiet = memberRef.collection('dietLogs').orderBy('date', 'desc').limit(7).onSnapshot(snap => {
+            setDietLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as DietLog)));
+            setLoading(l => ({...l, diet: false}));
+        });
+
         return () => {
-            logUnsub();
-            measurementUnsub();
-            historyUnsub();
+            unsubLogs();
+            unsubMeasurements();
+            unsubDiet();
         };
     }, [member.id]);
-    
-    const handleSendMessage = async () => {
-        if (!messageText.trim()) return;
-        setIsSending(true);
-        try {
-            const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-            const fullMessage = `트레이너 메시지: "${messageText.trim()}"`;
-            
-            const batch = db.batch();
 
-            // For member's notification bell
-            const notificationRef = db.collection('notifications').doc();
-            batch.set(notificationRef, {
-                userId: member.id,
-                message: fullMessage,
-                read: false,
-                createdAt: timestamp,
-            });
-
-            // For trainer's history view
-            const messageRef = db.collection('users').doc(member.id).collection('messages').doc();
-            batch.set(messageRef, {
-                message: fullMessage,
-                senderId: firebase.auth().currentUser?.uid,
-                createdAt: timestamp,
-            });
-            
-            await batch.commit();
-
-            setMessageText('');
-            setSendSuccess(true);
-            setTimeout(() => setSendSuccess(false), 3000);
-        } catch (error) {
-            console.error("Error sending message:", error);
-            alert("메시지 전송에 실패했습니다.");
-        } finally {
-            setIsSending(false);
-        }
+    const handleOpenExerciseLogModal = (log: ExerciseLog | null) => {
+        setEditingExerciseLog(log);
+        setIsExerciseLogModalOpen(true);
     };
 
-    const handleSaveLog = async (logData: Omit<ExerciseLog, 'id' | 'createdAt'>) => {
+    const handleSaveExerciseLog = async (logData: Omit<ExerciseLog, 'id' | 'createdAt'>) => {
         const collectionRef = db.collection('users').doc(member.id).collection('exerciseLogs');
         try {
-            if (editingLog) {
-                await collectionRef.doc(editingLog.id).update(logData);
+            if (editingExerciseLog) {
+                await collectionRef.doc(editingExerciseLog.id).update(logData);
             } else {
-                await collectionRef.add({
-                    ...logData,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                });
+                await collectionRef.add({ ...logData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
-            setIsLogModalOpen(false);
-            setEditingLog(null);
+            setIsExerciseLogModalOpen(false);
+            setEditingExerciseLog(null);
         } catch (error) {
-            console.error("Error saving log:", error);
-            alert("운동 일지 저장에 실패했습니다.");
+            console.error("Error saving exercise log:", error);
+            alert("운동 기록 저장에 실패했습니다.");
         }
     };
     
-    const handleDeleteLog = async (logId: string) => {
-        if(window.confirm('정말로 이 기록을 삭제하시겠습니까?')) {
+    const handleDeleteExerciseLog = async (logId: string) => {
+        if (window.confirm('정말로 이 기록을 삭제하시겠습니까?')) {
             await db.collection('users').doc(member.id).collection('exerciseLogs').doc(logId).delete();
         }
     };
 
+    const handleOpenMeasurementModal = (measurement: BodyMeasurement | null) => {
+        setEditingMeasurement(measurement);
+        setIsMeasurementModalOpen(true);
+    };
+
     const handleSaveMeasurement = async (measurementData: Omit<BodyMeasurement, 'id' | 'createdAt'>) => {
+        const collectionRef = db.collection('users').doc(member.id).collection('bodyMeasurements');
         try {
-             await db.collection('users').doc(member.id).collection('bodyMeasurements').add({
-                ...measurementData,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            });
+            if (editingMeasurement) {
+                await collectionRef.doc(editingMeasurement.id).update(measurementData);
+            } else {
+                await collectionRef.add({ ...measurementData, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            }
             setIsMeasurementModalOpen(false);
+            setEditingMeasurement(null);
         } catch (error) {
-            console.error("Error saving measurement:", error);
+            console.error("Error saving body measurement:", error);
             alert("신체 정보 저장에 실패했습니다.");
         }
     };
-
+    
     const handleDeleteMeasurement = async (measurementId: string) => {
-        if(window.confirm('정말로 이 기록을 삭제하시겠습니까?')) {
+        if (window.confirm('정말로 이 기록을 삭제하시겠습니까?')) {
             await db.collection('users').doc(member.id).collection('bodyMeasurements').doc(measurementId).delete();
         }
-    }
-    
-    const timeSince = (date: firebase.firestore.Timestamp): string => {
-        if (!date) return '';
-        const seconds = Math.floor((new Date().getTime() - date.toDate().getTime()) / 1000);
-        let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + "년 전";
-        interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + "달 전";
-        interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + "일 전";
-        interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + "시간 전";
-        interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + "분 전";
-        return "방금 전";
     };
 
+    const mealTypes: { key: MealType, name: string }[] = [
+      { key: 'breakfast', name: '아침' },
+      { key: 'lunch', name: '점심' },
+      { key: 'dinner', name: '저녁' },
+      { key: 'snacks', name: '간식' },
+    ];
+    
     const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
 
     return (
         <>
@@ -172,258 +286,135 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     <span>회원 목록으로 돌아가기</span>
                 </button>
 
+                {/* Header and Profile Section */}
                 <div className="bg-dark-accent p-6 rounded-lg shadow-lg mb-8">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                         <div>
-                            <h1 className="text-3xl font-bold text-white">{member.name || '이름 미지정'}</h1>
+                            <h1 className="text-3xl font-bold text-white">{member.name}</h1>
                             <p className="text-gray-400">{member.email}</p>
                         </div>
-                        <button onClick={onEditProfile} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-2 px-3 rounded-lg transition-colors text-sm">
-                            <PencilIcon className="w-4 h-4" />
+                        <button onClick={onEditProfile} className="mt-4 sm:mt-0 flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            <PencilIcon className="w-5 h-5"/>
                             <span>프로필 수정</span>
                         </button>
                     </div>
-                    <div className="mt-4 border-t border-gray-700 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div><strong className="text-gray-400">연락처:</strong> {member.contact || '-'}</div>
-                        <div><strong className="text-gray-400">운동 목표:</strong> {member.goal || '-'}</div>
-                        <div className="md:col-span-2"><strong className="text-gray-400">메모:</strong> {member.notes || '-'}</div>
+                    <div className="mt-4 pt-4 border-t border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <h3 className="font-semibold text-gray-300 mb-1">운동 목표</h3>
+                            <p className="text-gray-400 whitespace-pre-wrap">{member.goal || '지정된 목표가 없습니다.'}</p>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-300 mb-1">트레이너 메모 (회원 비공개)</h3>
+                            <p className="text-gray-400 whitespace-pre-wrap">{member.notes || '작성된 메모가 없습니다.'}</p>
+                        </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column */}
-                    <div className="space-y-8">
-                        <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-white flex items-center"><ChartBarIcon className="w-6 h-6 mr-2 text-primary"/>신체 변화 기록</h2>
-                                <button onClick={() => setIsMeasurementModalOpen(true)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
-                                    <PlusCircleIcon className="w-5 h-5"/>
-                                    <span>기록 추가</span>
-                                </button>
-                            </div>
-                            <ProgressChart measurements={sortedMeasurements} />
-                            <div className="mt-4 max-h-40 overflow-y-auto space-y-2">
-                                {loading.measurements ? <p className="text-gray-400">로딩 중...</p> : bodyMeasurements.map(m => (
-                                    <div key={m.id} className="flex justify-between items-center bg-dark p-2 rounded-md text-sm">
-                                        <span>{new Date(m.date).toLocaleDateString('ko-KR')}</span>
-                                        <span>체중: {m.weight}kg | 체지방: {m.bodyFat || '-'}%</span>
-                                        <button onClick={() => handleDeleteMeasurement(m.id)} className="p-1 hover:bg-red-500/20 rounded-full"><TrashIcon className="w-4 h-4 text-red-400"/></button>
-                                    </div>
-                                ))}
-                            </div>
+                    {/* Progress Section */}
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center"><ChartBarIcon className="w-6 h-6 mr-3 text-primary"/>성장 기록</h2>
+                            <button onClick={() => handleOpenMeasurementModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
+                                <PlusCircleIcon className="w-5 h-5"/>
+                                <span>기록 추가</span>
+                            </button>
                         </div>
-
-                        <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                            <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-white flex items-center"><DumbbellIcon className="w-6 h-6 mr-2 text-primary"/>운동 일지</h2>
-                                <button onClick={() => { setEditingLog(null); setIsLogModalOpen(true); }} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
-                                    <PlusCircleIcon className="w-5 h-5"/>
-                                    <span>일지 추가</span>
-                                </button>
-                            </div>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {loading.logs ? <p className="text-gray-400">로딩 중...</p> : exerciseLogs.length > 0 ? (
-                                    exerciseLogs.map(log => (
-                                        <div key={log.id} className="bg-dark p-3 rounded-md">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-semibold text-primary">{log.date}</p>
-                                                    <p className="font-bold text-white mt-1">{log.exerciseName}</p>
-                                                </div>
-                                                <div className="flex space-x-1">
-                                                    <button onClick={() => { setEditingLog(log); setIsLogModalOpen(true); }} className="p-1 hover:bg-primary/20 rounded-full"><PencilIcon className="w-4 h-4 text-primary"/></button>
-                                                    <button onClick={() => handleDeleteLog(log.id)} className="p-1 hover:bg-red-500/20 rounded-full"><TrashIcon className="w-4 h-4 text-red-400"/></button>
-                                                </div>
-                                            </div>
-                                            <div className="text-sm text-gray-400 mt-1">
-                                                {log.sets.map((set, index) => (
-                                                    <span key={index} className="mr-3">{set.weight}kg x {set.reps}회</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-gray-400">기록된 운동 일지가 없습니다.</p>
-                                )}
-                            </div>
+                        <ProgressChart measurements={sortedMeasurements} />
+                        <div className="space-y-2 mt-4 max-h-40 overflow-y-auto">
+                            {loading.measurements ? <p>로딩 중...</p> : sortedMeasurements.slice().reverse().map(m => (
+                                <div key={m.id} className="flex justify-between items-center bg-dark p-2 rounded-md text-sm">
+                                    <span className="font-semibold text-gray-300">{m.date}</span>
+                                    <div className="flex space-x-4">
+                                        {m.weight != null && <span>체중: {m.weight}kg</span>}
+                                        {m.bodyFat != null && <span>체지방: {m.bodyFat}%</span>}
+                                    </div>
+                                    <div>
+                                        <button onClick={() => handleOpenMeasurementModal(m)} className="p-1"><PencilIcon className="w-4 h-4 text-gray-400 hover:text-primary"/></button>
+                                        <button onClick={() => handleDeleteMeasurement(m.id)} className="p-1"><TrashIcon className="w-4 h-4 text-gray-400 hover:text-red-400"/></button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Right Column */}
-                     <div className="space-y-8">
-                        <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                            <h2 className="text-xl font-bold text-white flex items-center mb-4">
-                                <ChatBubbleIcon className="w-6 h-6 mr-2 text-primary"/>메시지 보내기
-                            </h2>
-                            <textarea
-                                value={messageText}
-                                onChange={(e) => setMessageText(e.target.value)}
-                                rows={4}
-                                placeholder={`${member.name || '회원'}님에게 동기부여 메시지나 공지를 보내보세요.`}
-                                className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
-                            <div className="flex justify-end items-center mt-3">
-                                {sendSuccess && <p className="text-sm text-green-400 mr-4">메시지를 성공적으로 보냈습니다.</p>}
-                                <button onClick={handleSendMessage} disabled={isSending || !messageText.trim()} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {isSending ? '전송 중...' : '전송'}
-                                </button>
-                            </div>
+                    {/* Exercise Logs */}
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center"><DocumentTextIcon className="w-6 h-6 mr-3 text-primary"/>운동 일지</h2>
+                            <button onClick={() => handleOpenExerciseLogModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
+                                <PlusCircleIcon className="w-5 h-5"/>
+                                <span>일지 추가</span>
+                            </button>
                         </div>
-                        <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                            <h2 className="text-xl font-bold text-white mb-4">메시지 기록</h2>
-                            <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {loading.history ? <p className="text-gray-400">기록을 불러오는 중...</p> : messageHistory.length > 0 ? (
-                                    messageHistory.map(msg => (
-                                        <div key={msg.id} className="p-3 rounded-md bg-dark">
-                                            <p className="text-sm text-gray-300">{msg.message}</p>
-                                            <p className="text-xs text-gray-500 mt-2 flex items-center">
-                                                <ClockIcon className="w-3 h-3 mr-1" />
-                                                {timeSince(msg.createdAt)}
-                                            </p>
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                            {loading.logs ? <p>로딩 중...</p> : exerciseLogs.length > 0 ? exerciseLogs.map(log => (
+                                <div key={log.id} className="bg-dark p-3 rounded-md">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold text-primary">{log.date}</p>
+                                            <p className="font-bold text-white mt-1">{log.exerciseName}</p>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-gray-400">아직 보낸 메시지가 없습니다.</p>
-                                )}
-                            </div>
+                                        <div className="flex space-x-1">
+                                            <button onClick={() => handleOpenExerciseLogModal(log)} className="p-1"><PencilIcon className="w-4 h-4 text-gray-400 hover:text-primary"/></button>
+                                            <button onClick={() => handleDeleteExerciseLog(log.id)} className="p-1"><TrashIcon className="w-4 h-4 text-gray-400 hover:text-red-400"/></button>
+                                        </div>
+                                    </div>
+                                    <div className="text-sm text-gray-400 mt-1">
+                                        {log.sets.map((set, i) => <span key={i} className="mr-3">{set.weight}kg x {set.reps}회</span>)}
+                                    </div>
+                                </div>
+                            )) : <p className="text-gray-400">운동 기록이 없습니다.</p>}
                         </div>
+                    </div>
+                </div>
+
+                {/* Diet Logs */}
+                <div className="mt-8 bg-dark-accent p-6 rounded-lg shadow-lg">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center"><FireIcon className="w-6 h-6 mr-3 text-primary"/>최근 식단 기록</h2>
+                    <div className="space-y-6">
+                        {loading.diet ? <p>로딩 중...</p> : dietLogs.length > 0 ? dietLogs.map(log => (
+                            <div key={log.id} className="bg-dark p-4 rounded-lg">
+                                <div className="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                                    <h3 className="font-bold text-primary">{log.date}</h3>
+                                    <p className="text-lg font-bold text-primary">{log.totalCalories} kcal</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    {mealTypes.map(meal => (
+                                        <div key={meal.key}>
+                                            <h4 className="font-semibold text-gray-300 mb-1">{meal.name}</h4>
+                                            {log.meals[meal.key] && log.meals[meal.key].length > 0 ? (
+                                                log.meals[meal.key].map(food => (
+                                                    <div key={food.id} className="flex justify-between text-gray-400">
+                                                        <span>{food.foodName}</span>
+                                                        <span>{food.calories} kcal</span>
+                                                    </div>
+                                                ))
+                                            ) : <p className="text-xs text-gray-500">기록 없음</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )) : <p className="text-gray-400">식단 기록이 없습니다.</p>}
                     </div>
                 </div>
             </div>
 
-            {isLogModalOpen && <AddEditLogModal isOpen={isLogModalOpen} onClose={() => { setIsLogModalOpen(false); setEditingLog(null); }} onSave={handleSaveLog} log={editingLog} />}
-            {isMeasurementModalOpen && <AddMeasurementModal isOpen={isMeasurementModalOpen} onClose={() => setIsMeasurementModalOpen(false)} onSave={handleSaveMeasurement} />}
+            {/* Modals */}
+            <AddEditExerciseLogModal
+                isOpen={isExerciseLogModalOpen}
+                onClose={() => { setIsExerciseLogModalOpen(false); setEditingExerciseLog(null); }}
+                onSave={handleSaveExerciseLog}
+                log={editingExerciseLog}
+            />
+            <AddEditBodyMeasurementModal
+                isOpen={isMeasurementModalOpen}
+                onClose={() => { setIsMeasurementModalOpen(false); setEditingMeasurement(null); }}
+                onSave={handleSaveMeasurement}
+                measurement={editingMeasurement}
+            />
         </>
     );
 };
-
-// --- Modals (in-file components for simplicity) ---
-
-// Add/Edit Log Modal
-interface AddEditLogModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (data: Omit<ExerciseLog, 'id'|'createdAt'>) => void;
-    log: ExerciseLog | null;
-}
-
-const AddEditLogModal: React.FC<AddEditLogModalProps> = ({ isOpen, onClose, onSave, log }) => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [exerciseName, setExerciseName] = useState('');
-    const [sets, setSets] = useState<ExerciseSet[]>([{ reps: 10, weight: 20 }]);
-
-    useEffect(() => {
-        if (log) {
-            setDate(log.date);
-            setExerciseName(log.exerciseName);
-            setSets(log.sets);
-        } else {
-            setDate(new Date().toISOString().split('T')[0]);
-            setExerciseName('');
-            setSets([{ reps: 10, weight: 20 }]);
-        }
-    }, [log, isOpen]);
-
-    const handleSetChange = (index: number, field: keyof ExerciseSet, value: number) => {
-        const newSets = [...sets];
-        newSets[index][field] = value;
-        setSets(newSets);
-    };
-
-    const addSet = () => setSets([...sets, { reps: 10, weight: 20 }]);
-    const removeSet = (index: number) => setSets(sets.filter((_, i) => i !== index));
-
-    const handleSubmit = () => {
-        if (!exerciseName) { alert('운동 이름을 입력하세요.'); return; }
-        onSave({ date, exerciseName, sets });
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={log ? "운동 일지 수정" : "운동 일지 추가"}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">날짜</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600"/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">운동 이름</label>
-                    <input type="text" value={exerciseName} onChange={e => setExerciseName(e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600"/>
-                </div>
-                <div>
-                     <label className="block text-sm font-medium text-gray-300 mb-1">세트</label>
-                     <div className="space-y-2">
-                        {sets.map((set, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <input type="number" placeholder="무게(kg)" value={set.weight} onChange={e => handleSetChange(index, 'weight', +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600" />
-                                <span className="text-gray-400">kg</span>
-                                <input type="number" placeholder="횟수" value={set.reps} onChange={e => handleSetChange(index, 'reps', +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600" />
-                                <span className="text-gray-400">회</span>
-                                <button onClick={() => removeSet(index)} className="p-1 hover:bg-red-500/20 rounded-full"><TrashIcon className="w-5 h-5 text-red-400"/></button>
-                            </div>
-                        ))}
-                     </div>
-                     <button onClick={addSet} className="mt-2 text-primary text-sm font-semibold hover:underline">+ 세트 추가</button>
-                </div>
-                <div className="flex justify-end space-x-3 pt-4">
-                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-                    <button onClick={handleSubmit} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg">저장</button>
-                </div>
-            </div>
-        </Modal>
-    );
-};
-
-
-// Add Measurement Modal
-interface AddMeasurementModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (data: Omit<BodyMeasurement, 'id'|'createdAt'>) => void;
-}
-
-const AddMeasurementModal: React.FC<AddMeasurementModalProps> = ({ isOpen, onClose, onSave }) => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [weight, setWeight] = useState<number | ''>('');
-    const [bodyFat, setBodyFat] = useState<number | ''>('');
-
-    const handleSubmit = () => {
-        if (weight === '') { alert('체중을 입력하세요.'); return; }
-        const data: Omit<BodyMeasurement, 'id'|'createdAt'> = { date, weight: +weight };
-        if (bodyFat !== '') data.bodyFat = +bodyFat;
-        onSave(data);
-    };
-    
-    useEffect(() => {
-        if(isOpen) {
-            setDate(new Date().toISOString().split('T')[0]);
-            setWeight('');
-            setBodyFat('');
-        }
-    }, [isOpen]);
-
-    return (
-         <Modal isOpen={isOpen} onClose={onClose} title="신체 정보 기록 추가">
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">측정일</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600"/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">체중 (kg)</label>
-                    <input type="number" value={weight} onChange={e => setWeight(e.target.value === '' ? '' : +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600"/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">체지방률 (%)</label>
-                    <input type="number" value={bodyFat} onChange={e => setBodyFat(e.target.value === '' ? '' : +e.target.value)} className="w-full bg-dark p-2 rounded-md text-white border border-gray-600"/>
-                </div>
-                <div className="flex justify-end space-x-3 pt-4">
-                    <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-                    <button onClick={handleSubmit} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg">저장</button>
-                </div>
-            </div>
-        </Modal>
-    );
-};
-
 
 export default MemberDetailView;
