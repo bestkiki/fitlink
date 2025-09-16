@@ -24,7 +24,9 @@ type TrainerDashboardView = 'dashboard' | 'member_detail' | 'schedule';
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
   const [inviteLink, setInviteLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [publicProfileLink, setPublicProfileLink] = useState('');
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [copiedProfile, setCopiedProfile] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,20 +61,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         setLoadingMembers(false);
       }
     };
-
+    
+    setInviteLink(`${window.location.origin}/signup/coach/${user.uid}`);
+    setPublicProfileLink(`${window.location.origin}/coach/${user.uid}`);
     fetchMembers();
   }, [user.uid]);
-  
-  const generateInviteLink = () => {
-    const link = `${window.location.origin}/signup/coach/${user.uid}`;
-    setInviteLink(link);
-  };
 
-  const copyToClipboard = () => {
-    if (inviteLink) {
+  const copyToClipboard = (link: 'invite' | 'profile') => {
+    if (link === 'invite') {
         navigator.clipboard.writeText(inviteLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setCopiedInvite(true);
+        setTimeout(() => setCopiedInvite(false), 2000);
+    } else {
+        navigator.clipboard.writeText(publicProfileLink);
+        setCopiedProfile(true);
+        setTimeout(() => setCopiedProfile(false), 2000);
     }
   };
   
@@ -184,37 +187,55 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
               <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                 <h2 className="text-xl font-bold text-white mb-4">회원 초대하기</h2>
                 <p className="text-gray-400 mb-4">
-                  회원을 초대하여 FitLink에서 함께 운동 계획을 관리하세요.
+                  가입 링크를 공유하여 회원을 초대하세요.
                 </p>
-                {!inviteLink ? (
-                  <button
-                    onClick={generateInviteLink}
-                    className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors mt-auto"
-                  >
-                    초대 링크 생성
-                  </button>
-                ) : (
-                  <div className="flex flex-col space-y-2">
+                <div className="flex flex-col space-y-2">
                     <input
-                      type="text"
-                      value={inviteLink}
-                      readOnly
-                      className="w-full bg-dark p-2 rounded-md text-gray-300 border border-gray-600 focus:outline-none"
+                        type="text"
+                        value={inviteLink}
+                        readOnly
+                        className="w-full bg-dark p-2 rounded-md text-gray-300 border border-gray-600 focus:outline-none"
                     />
                     <button
-                      onClick={copyToClipboard}
-                      className="w-full bg-secondary hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        onClick={() => copyToClipboard('invite')}
+                        className="w-full bg-secondary hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
                     >
-                      {copied ? '복사 완료!' : '링크 복사'}
+                        {copiedInvite ? '복사 완료!' : '초대 링크 복사'}
                     </button>
-                  </div>
-                )}
+                </div>
               </div>
               
+               {/* Public Profile Card */}
+               <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                <h2 className="text-xl font-bold text-white mb-4">홍보 페이지 관리</h2>
+                <p className="text-gray-400 mb-4">
+                  외부 홍보용 프로필 페이지입니다.
+                </p>
+                <div className="flex flex-col space-y-2">
+                    <input
+                        type="text"
+                        value={publicProfileLink}
+                        readOnly
+                        className="w-full bg-dark p-2 rounded-md text-gray-300 border border-gray-600 focus:outline-none"
+                    />
+                    <div className="flex space-x-2">
+                         <button
+                            onClick={() => copyToClipboard('profile')}
+                            className="w-full bg-secondary hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            {copiedProfile ? '복사!' : 'URL 복사'}
+                        </button>
+                         <a href={publicProfileLink} target="_blank" rel="noopener noreferrer" className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors text-center">
+                            보기
+                         </a>
+                    </div>
+                </div>
+              </div>
+
               <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center">
                   <IdCardIcon className="w-12 h-12 text-primary mb-4" />
                   <h2 className="text-xl font-bold text-white mb-2">내 프로필 관리</h2>
-                  <p className="text-gray-400">회원에게 보여줄 프로필을 관리합니다.</p>
+                  <p className="text-gray-400">회원 및 홍보 페이지에 보여줄 프로필을 관리합니다.</p>
                   <button onClick={() => setIsProfileModalOpen(true)} className="mt-4 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
                       프로필 수정
                   </button>

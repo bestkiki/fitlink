@@ -11,6 +11,7 @@ import UnauthenticatedApp, { Page } from './UnauthenticatedApp';
 import LoadingSpinner from './components/LoadingSpinner';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TrainerPublicProfile from './pages/TrainerPublicProfile';
 
 export interface UserProfile {
   role: 'trainer' | 'member' | null;
@@ -77,14 +78,18 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [trainerIdFromUrl, setTrainerIdFromUrl] = useState<string | null>(null);
+  const [publicTrainerId, setPublicTrainerId] = useState<string | null>(null);
   const [legalPageView, setLegalPageView] = useState<'none' | 'terms' | 'privacy'>('none');
 
   useEffect(() => {
     // Handle routing based on path
     const path = window.location.pathname;
     const signupMatch = path.match(/^\/signup\/coach\/([a-zA-Z0-9]+)/);
+    const profileMatch = path.match(/^\/coach\/([a-zA-Z0-9]+)/);
 
-    if (signupMatch) {
+    if (profileMatch) {
+      setPublicTrainerId(profileMatch[1]);
+    } else if (signupMatch) {
       const trainerId = signupMatch[1];
       setTrainerIdFromUrl(trainerId);
       setCurrentPage('signup');
@@ -111,7 +116,7 @@ function App() {
         // User is signed out.
         setUser(null);
         setUserProfile(null);
-        if (!signupMatch) { // Do not override signup page if on invite link
+        if (!signupMatch && !profileMatch) { // Do not override signup/profile page if on specific link
             setCurrentPage('landing');
         }
       }
@@ -125,18 +130,27 @@ function App() {
     setLoading(true);
     await auth.signOut();
     setLegalPageView('none');
+    setPublicTrainerId(null);
     window.history.pushState({}, '', '/');
   };
 
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
     setLegalPageView('none');
+    setPublicTrainerId(null);
     const path = page === 'landing' ? '/' : `/${page}`;
     window.history.pushState({ page }, '', path);
   };
   
   const handleLegalNavigate = (page: 'terms' | 'privacy') => {
     setLegalPageView(page);
+  };
+  
+  const handleNavigateToSignupFromProfile = (trainerId: string) => {
+    setPublicTrainerId(null);
+    setTrainerIdFromUrl(trainerId);
+    setCurrentPage('signup');
+    window.history.pushState({ page: 'signup' }, '', `/signup/coach/${trainerId}`);
   };
 
   const handleBackFromLegal = () => {
@@ -146,9 +160,23 @@ function App() {
   // Update page on browser back/forward
   useEffect(() => {
     const handlePopState = () => {
-        const path = window.location.pathname.substring(1);
-        if (['landing', 'login', 'signup'].includes(path) || path === '') {
-            setCurrentPage(path === '' ? 'landing' : path as Page);
+        const path = window.location.pathname;
+        const signupMatch = path.match(/^\/signup\/coach\/([a-zA-Z0-9]+)/);
+        const profileMatch = path.match(/^\/coach\/([a-zA-Z0-9]+)/);
+
+        if(profileMatch) {
+            setPublicTrainerId(profileMatch[1]);
+            setCurrentPage('landing'); // Reset other pages
+        } else if (signupMatch) {
+            setTrainerIdFromUrl(signupMatch[1]);
+            setCurrentPage('signup');
+            setPublicTrainerId(null);
+        } else {
+            const page = path.substring(1);
+            if (['landing', 'login', 'signup'].includes(page) || page === '') {
+                setCurrentPage(page === '' ? 'landing' : page as Page);
+            }
+            setPublicTrainerId(null);
         }
     };
     window.addEventListener('popstate', handlePopState);
@@ -160,6 +188,22 @@ function App() {
     return <LoadingSpinner />;
   }
 
+  const renderContent = () => {
+    if (legalPageView === 'terms') return <TermsOfService onBack={handleBackFromLegal} />;
+    if (legalPageView === 'privacy') return <PrivacyPolicy onBack={handleBackFromLegal} />;
+    if (publicTrainerId) return <TrainerPublicProfile trainerId={publicTrainerId} onNavigateToSignup={handleNavigateToSignupFromProfile} />;
+
+    return user && userProfile ? (
+        <AuthenticatedApp user={user} userProfile={userProfile} />
+    ) : (
+        <UnauthenticatedApp 
+            currentPage={currentPage} 
+            onNavigate={handleNavigate} 
+            trainerId={trainerIdFromUrl}
+        />
+    );
+  }
+
   return (
     <div className="bg-dark text-gray-200 min-h-screen flex flex-col">
       <Header 
@@ -168,19 +212,7 @@ function App() {
         onNavigate={!user ? handleNavigate : undefined}
       />
       <main className="flex-grow">
-        {legalPageView === 'terms' && <TermsOfService onBack={handleBackFromLegal} />}
-        {legalPageView === 'privacy' && <PrivacyPolicy onBack={handleBackFromLegal} />}
-        {legalPageView === 'none' && (
-            user && userProfile ? (
-            <AuthenticatedApp user={user} userProfile={userProfile} />
-            ) : (
-            <UnauthenticatedApp 
-                currentPage={currentPage} 
-                onNavigate={handleNavigate} 
-                trainerId={trainerIdFromUrl}
-            />
-            )
-        )}
+        {renderContent()}
       </main>
       <Footer onNavigate={handleLegalNavigate} />
     </div>
