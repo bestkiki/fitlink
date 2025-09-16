@@ -72,7 +72,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     ) => {
         try {
             const uploadImage = async (file: File, path: string): Promise<string> => {
-                const storageRef = storage.ref(path);
+                const fileName = `${Date.now()}-${file.name}`;
+                const fullPath = `${path}/${fileName}`;
+                const storageRef = storage.ref(fullPath);
                 const snapshot = await storageRef.put(file);
                 return snapshot.ref.getDownloadURL();
             };
