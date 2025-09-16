@@ -234,22 +234,6 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
     useEffect(() => {
         const memberRef = db.collection('users').doc(member.id);
 
-        const fetchWithFeedback = async <T extends { id: string }>(
-            collectionName: string,
-            orderByField: string = 'createdAt'
-        ): Promise<T[]> => {
-            const snapshot = await memberRef.collection(collectionName).orderBy(orderByField, 'desc').get();
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-            
-            const itemsWithFeedback = await Promise.all(items.map(async item => {
-                const feedbackSnap = await memberRef.collection(collectionName).doc(item.id).collection('feedback').orderBy('createdAt', 'asc').get();
-                const feedback = feedbackSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feedback));
-                return { ...item, feedback };
-            }));
-            
-            return itemsWithFeedback;
-        };
-
         const unsubLogs = memberRef.collection('exerciseLogs').orderBy('createdAt', 'desc').onSnapshot(snap => {
             setExerciseLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog)));
             setLoading(l => ({ ...l, logs: false }));
@@ -260,20 +244,33 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
             setLoading(l => ({ ...l, measurements: false }));
         });
         
-        fetchWithFeedback<PersonalExerciseLog>('personalExerciseLogs').then(data => {
-            setPersonalExerciseLogs(data);
-            setLoading(l => ({...l, personalLogs: false}));
+        const unsubPersonalLogs = memberRef.collection('personalExerciseLogs').orderBy('createdAt', 'desc').onSnapshot(async (snapshot) => {
+            const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PersonalExerciseLog));
+            const logsWithFeedback = await Promise.all(logsData.map(async log => {
+                const feedbackSnap = await memberRef.collection('personalExerciseLogs').doc(log.id).collection('feedback').orderBy('createdAt', 'asc').get();
+                const feedback = feedbackSnap.docs.map(fbDoc => ({ id: fbDoc.id, ...fbDoc.data() } as Feedback));
+                return { ...log, feedback };
+            }));
+            setPersonalExerciseLogs(logsWithFeedback);
+            setLoading(l => ({ ...l, personalLogs: false }));
         });
 
-        fetchWithFeedback<DietLog>('dietLogs', 'date').then(data => {
-            setDietLogs(data);
-            setLoading(l => ({...l, diet: false}));
+        const unsubDietLogs = memberRef.collection('dietLogs').orderBy('date', 'desc').onSnapshot(async (snapshot) => {
+            const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DietLog));
+            const logsWithFeedback = await Promise.all(logsData.map(async log => {
+                const feedbackSnap = await memberRef.collection('dietLogs').doc(log.id).collection('feedback').orderBy('createdAt', 'asc').get();
+                const feedback = feedbackSnap.docs.map(fbDoc => ({ id: fbDoc.id, ...fbDoc.data() } as Feedback));
+                return { ...log, feedback };
+            }));
+            setDietLogs(logsWithFeedback);
+            setLoading(l => ({ ...l, diet: false }));
         });
-
 
         return () => {
             unsubLogs();
             unsubMeasurements();
+            unsubPersonalLogs();
+            unsubDietLogs();
         };
     }, [member.id]);
 
@@ -287,12 +284,14 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
 
         try {
             const feedbackRef = db.collection('users').doc(member.id).collection(logType).doc(logId).collection('feedback');
-            await feedbackRef.add({
+            const newFeedbackData = {
                 text: feedbackText,
                 trainerId: trainer.uid,
-                trainerName: trainer.displayName || trainer.email,
+                trainerName: trainer.displayName || trainer.email || '트레이너',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+            
+            const newDocRef = await feedbackRef.add(newFeedbackData);
 
             await db.collection('notifications').add({
                 userId: member.id,
@@ -301,14 +300,21 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Refresh data locally
-            const feedbackSnap = await feedbackRef.orderBy('createdAt', 'asc').get();
-            const newFeedbackList = feedbackSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Feedback));
+            // Immediately update local state for instant UI feedback
+            const newFeedback: Feedback = { 
+                id: newDocRef.id, 
+                ...newFeedbackData, 
+                createdAt: firebase.firestore.Timestamp.now() 
+            };
 
             if (logType === 'personalExerciseLogs') {
-                setPersonalExerciseLogs(prev => prev.map(log => log.id === logId ? {...log, feedback: newFeedbackList} : log));
+                setPersonalExerciseLogs(prev => prev.map(log => 
+                    log.id === logId ? {...log, feedback: [...(log.feedback || []), newFeedback]} : log
+                ));
             } else {
-                setDietLogs(prev => prev.map(log => log.id === logId ? {...log, feedback: newFeedbackList} : log));
+                setDietLogs(prev => prev.map(log => 
+                    log.id === logId ? {...log, feedback: [...(log.feedback || []), newFeedback]} : log
+                ));
             }
 
         } catch (error) {
