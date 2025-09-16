@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // FIX: Added actual SVG icon components to replace placeholder content.
@@ -31,7 +30,7 @@ export const CalendarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
 export const ChatBubbleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.372c-1.034.103-1.933-.51-2.485-1.345l-2.022-2.899a.75.75 0 00-1.214 0l-2.022 2.899c-.552.835-1.451 1.448-2.485 1.345l-3.722-.372C3.847 17.1 3 16.136 3 15v-4.286c0-.97.616-1.813 1.5-2.097v6.622a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25v-6.622z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.376v-4.286c0-1.136.847-2.1 1.98-2.193l3.722-.372c1.034-.103 1.933.51 2.485 1.345l2.022 2.899a.75.75 0 001.214 0l2.022-2.899c.552-.835 1.451-1.448 2.485-1.345l3.722.372c1.133.1 1.98.943 1.98 2.059v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.372c-1.034.103-1.933-.51-2.485-1.345l-2.022-2.899a.75.75 0 00-1.214 0l-2.022-2.899c-.552-.835-1.451-1.448-2.485-1.345l-3.722-.372C4.597 16.476 3.75 15.512 3.75 14.376z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.376v-4.286c0-1.136.847-2.1 1.98-2.193l3.722-.372c1.034-.103 1.933.51 2.485 1.345l2.022 2.899a.75.75 0 001.214 0l2.022-2.899c.552-.835-1.451-1.448-2.485-1.345l3.722.372c1.133.1 1.98.943 1.98 2.059v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.372c-1.034.103-1.933-.51-2.485-1.345l-2.022-2.899a.75.75 0 00-1.214 0l-2.022-2.899c-.552-.835-1.451-1.448-2.485-1.345l-3.722-.372C4.597 16.476 3.75 15.512 3.75 14.376z" />
   </svg>
 );
 
@@ -124,5 +123,23 @@ export const ShareIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.195.025.39.042.586.042h4.414c.196 0 .391-.017.586-.042M16.5 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+    </svg>
+);
+
+export const InboxIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.12-1.588H6.88a2.25 2.25 0 00-2.12 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" />
+    </svg>
+);
+
+export const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const PhoneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
     </svg>
 );

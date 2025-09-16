@@ -47,21 +47,24 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
         fetchTrainerProfile();
     }, [trainerId]);
 
-    const handleSendRequest = async (message: string) => {
+    const handleSendRequest = async (message: string, contact?: string, time?: string) => {
         if (!currentUser || !currentUserProfile || !trainerProfile) return;
 
         try {
-            // Add consultation request
-            await db.collection('users').doc(trainerId).collection('consultationRequests').add({
+            const requestData: any = {
                 memberId: currentUser.uid,
                 memberName: currentUserProfile.name || currentUser.email,
                 memberEmail: currentUser.email,
                 message: message,
                 status: 'pending',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
 
-            // Send notification to trainer
+            if (contact) requestData.memberContact = contact;
+            if (time) requestData.preferredTime = time;
+
+            await db.collection('users').doc(trainerId).collection('consultationRequests').add(requestData);
+
             await db.collection('notifications').add({
                 userId: trainerId,
                 message: `${currentUserProfile.name || currentUser.email}님이 상담 문의를 보냈습니다.`,
@@ -154,6 +157,7 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                 onClose={() => setIsModalOpen(false)}
                 onSend={handleSendRequest}
                 trainerName={trainerProfile.name || '트레이너'}
+                currentUserProfile={currentUserProfile}
             />
         </>
     );

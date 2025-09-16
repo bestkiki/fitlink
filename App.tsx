@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // FIX: Using compat imports for firebase v8 APIs
 import firebase from 'firebase/compat/app';
@@ -104,6 +103,18 @@ export interface Appointment {
     endTime: firebase.firestore.Timestamp;
     status: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_trainer';
     createdAt: firebase.firestore.Timestamp;
+}
+
+export interface ConsultationRequest {
+    id: string;
+    memberId: string;
+    memberName: string;
+    memberEmail: string;
+    message: string;
+    status: 'pending' | 'confirmed';
+    createdAt: firebase.firestore.Timestamp;
+    memberContact?: string;
+    preferredTime?: string;
 }
 
 

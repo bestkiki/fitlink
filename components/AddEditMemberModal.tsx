@@ -45,7 +45,12 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
         setError(''); // Clear previous errors
 
         try {
+            // FIX: The onSave handler expects a complete object matching Omit<Member, 'id' | 'email'>.
+            // Spreading the existing member object and overwriting with new values ensures all
+            // required properties are present and unchanged properties are preserved.
+            const { id, email, ...restOfMember } = member;
             await onSave({
+                ...restOfMember,
                 name,
                 contact,
                 goal,

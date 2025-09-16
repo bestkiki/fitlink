@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile } from '../App';
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, TrashIcon } from '../components/icons';
+import { UserProfile, ConsultationRequest } from '../App';
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, TrashIcon, InboxIcon, CheckCircleIcon, PhoneIcon, ClockIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
@@ -13,6 +12,10 @@ import ScheduleManager from './ScheduleManager';
 
 export interface Member extends UserProfile {
   id: string;
+}
+
+interface ConsultationRequestWithId extends ConsultationRequest {
+    id: string;
 }
 
 interface TrainerDashboardProps {
@@ -25,7 +28,9 @@ type TrainerView = 'dashboard' | 'member_detail' | 'schedule';
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
     const [members, setMembers] = useState<Member[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [consultationRequests, setConsultationRequests] = useState<ConsultationRequestWithId[]>([]);
+    const [loadingMembers, setLoadingMembers] = useState(true);
+    const [loadingRequests, setLoadingRequests] = useState(true);
     const [view, setView] = useState<TrainerView>('dashboard');
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
@@ -46,13 +51,26 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                     ...doc.data()
                 } as Member));
                 setMembers(memberData);
-                setLoading(false);
+                setLoadingMembers(false);
             });
 
         return () => unsubscribe();
     }, [user.uid]);
+    
+    useEffect(() => {
+        const unsubscribe = db.collection('users').doc(user.uid).collection('consultationRequests')
+            .orderBy('createdAt', 'desc')
+            .onSnapshot(snapshot => {
+                const requests = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as ConsultationRequestWithId));
+                setConsultationRequests(requests);
+                setLoadingRequests(false);
+            });
+        return () => unsubscribe();
+    }, [user.uid]);
 
-    // Profile update handler
     const handleSaveProfile = async (profileData: Partial<UserProfile>) => {
         try {
             await db.collection('users').doc(user.uid).update(profileData);
@@ -64,13 +82,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         }
     };
     
-    // Member selection handler
     const handleViewMember = (member: Member) => {
         setSelectedMember(member);
         setView('member_detail');
     };
 
-    // Modal openers
     const handleOpenEditMemberModal = (member: Member) => {
         setMemberToEdit(member);
         setIsEditMemberModalOpen(true);
@@ -81,14 +97,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         setIsDeleteModalOpen(true);
     };
 
-    // Member data handlers
     const handleSaveMember = async (memberData: Omit<Member, 'id' | 'email'>) => {
         if (!memberToEdit) return;
         try {
             await db.collection('users').doc(memberToEdit.id).update(memberData);
             setIsEditMemberModalOpen(false);
             setMemberToEdit(null);
-            // Also update selected member if they are being viewed
             if (selectedMember && selectedMember.id === memberToEdit.id) {
                 setSelectedMember(prev => ({...prev!, ...memberData}));
             }
@@ -101,14 +115,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     const handleDeleteMember = async () => {
         if (!memberToDelete) return;
         setIsDeleting(true);
-        // This is a soft delete - we remove the trainerId link.
-        // A hard delete would be db.collection('users').doc(memberToDelete.id).delete();
         await db.collection('users').doc(memberToDelete.id).update({
             trainerId: firebase.firestore.FieldValue.delete()
         });
         setIsDeleteModalOpen(false);
         setMemberToDelete(null);
         setIsDeleting(false);
+    };
+
+    const handleUpdateRequestStatus = async (requestId: string, status: 'confirmed') => {
+        await db.collection('users').doc(user.uid).collection('consultationRequests').doc(requestId).update({ status });
+    };
+
+    const handleDeleteRequest = async (requestId: string) => {
+        if (window.confirm('정말로 이 문의를 삭제하시겠습니까?')) {
+            await db.collection('users').doc(user.uid).collection('consultationRequests').doc(requestId).delete();
+        }
     };
 
     const publicProfileLink = `${window.location.origin}/coach/${user.uid}`;
@@ -127,7 +149,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">트레이너 대시보드</h1>
                 <p className="text-lg text-gray-300 mb-8">환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!</p>
 
-                {/* Profile & Actions */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                     <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                          <div className="flex items-center mb-4">
@@ -156,12 +177,55 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 <CalendarIcon className="w-6 h-6 text-primary" />
                                 <span>스케줄 관리</span>
                             </button>
-                            {/* Add other quick actions here */}
                         </div>
                     </div>
                 </div>
 
-                {/* Member List */}
+                <div className="bg-dark-accent p-6 rounded-lg shadow-lg mb-12">
+                    <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                        <InboxIcon className="w-8 h-8 mr-3 text-primary"/>상담 문의 내역
+                    </h2>
+                    {loadingRequests ? (
+                        <p className="text-gray-400">문의 내역을 불러오는 중...</p>
+                    ) : consultationRequests.length > 0 ? (
+                        <div className="space-y-4 max-h-96 overflow-y-auto">
+                            {consultationRequests.map(request => (
+                                <div key={request.id} className={`bg-dark p-4 rounded-lg border-l-4 ${request.status === 'pending' ? 'border-primary' : 'border-gray-600 opacity-70'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold text-white">{request.memberName}</p>
+                                            <p className="text-sm text-gray-400">{request.createdAt.toDate().toLocaleDateString('ko-KR')}</p>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            {request.status === 'pending' && (
+                                                <button onClick={() => handleUpdateRequestStatus(request.id, 'confirmed')} className="p-1 hover:bg-green-500/20 rounded-full" title="확인 완료로 표시">
+                                                    <CheckCircleIcon className="w-6 h-6 text-green-400 hover:text-green-300"/>
+                                                </button>
+                                            )}
+                                            <button onClick={() => handleDeleteRequest(request.id)} className="p-1 hover:bg-red-500/20 rounded-full" title="삭제">
+                                                <TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-400"/>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p className="mt-3 text-gray-300 text-sm whitespace-pre-wrap">{request.message}</p>
+                                    {(request.memberContact || request.preferredTime) && (
+                                        <div className="mt-3 pt-3 border-t border-gray-700/50 text-sm space-y-1">
+                                            {request.memberContact && (
+                                                <p className="flex items-center text-gray-400"><PhoneIcon className="w-4 h-4 mr-2 text-primary"/> {request.memberContact}</p>
+                                            )}
+                                            {request.preferredTime && (
+                                                <p className="flex items-center text-gray-400"><ClockIcon className="w-4 h-4 mr-2 text-primary"/> {request.preferredTime}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-center text-gray-400 py-4">아직 받은 상담 문의가 없습니다.</p>
+                    )}
+                </div>
+
                 <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-white flex items-center"><UsersIcon className="w-8 h-8 mr-3 text-primary"/>나의 회원 목록</h2>
@@ -170,9 +234,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             <span>회원 추가</span>
                         </button>
                     </div>
-                    
                     <div className="overflow-x-auto">
-                        {loading ? <p>회원 목록을 불러오는 중...</p> : members.length > 0 ? (
+                        {loadingMembers ? <p>회원 목록을 불러오는 중...</p> : members.length > 0 ? (
                              <table className="w-full text-left">
                                 <thead>
                                     <tr className="border-b border-gray-700">
@@ -203,7 +266,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 </div>
             </div>
 
-            {/* Modals */}
             <AddEditMemberModal isOpen={isEditMemberModalOpen} onClose={() => setIsEditMemberModalOpen(false)} onSave={handleSaveMember} member={memberToEdit} />
             <DeleteConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteMember} isDeleting={isDeleting} memberName={memberToDelete?.name || ''} />
             <EditTrainerProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} onSave={handleSaveProfile} userProfile={profile} />
