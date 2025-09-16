@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon } from '../components/icons';
+import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon, CameraIcon } from '../components/icons';
 import ConsultationRequestModal from '../components/ConsultationRequestModal';
 
 interface TrainerPublicProfileProps {
@@ -129,14 +129,9 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
         <>
             <div className="min-h-[calc(100vh-160px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark">
                 <div className="max-w-md w-full space-y-8 bg-dark-accent rounded-xl shadow-lg overflow-hidden">
-                    {trainerProfile.promoImageUrl && (
-                        <div className="h-48">
-                            <img src={trainerProfile.promoImageUrl} alt="Promotional banner" className="w-full h-full object-cover" />
-                        </div>
-                    )}
-
-                    <div className="px-8 pb-8 space-y-8">
-                        <div className={`text-center ${trainerProfile.promoImageUrl ? '-mt-24' : ''}`}>
+                    
+                    <div className="px-8 pt-8 pb-8 space-y-8">
+                        <div className="text-center">
                             <div className="relative inline-block">
                                 {trainerProfile.profileImageUrl ? (
                                     <img src={trainerProfile.profileImageUrl} alt="Trainer" className="w-28 h-28 mx-auto rounded-full object-cover border-4 border-dark-accent"/>
@@ -162,6 +157,13 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                                 <div className="bg-dark p-4 rounded-lg">
                                     <h3 className="font-bold text-primary flex items-center mb-2"><IdCardIcon className="w-5 h-5 mr-2"/>주요 경력</h3>
                                     <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.career}</p>
+                                </div>
+                            )}
+
+                            {trainerProfile.promoImageUrl && (
+                                <div className="bg-dark p-4 rounded-lg">
+                                    <h3 className="font-bold text-primary flex items-center mb-2"><CameraIcon className="w-5 h-5 mr-2"/>소개 이미지</h3>
+                                    <img src={trainerProfile.promoImageUrl} alt="소개 이미지" className="w-full rounded-md object-cover mt-2" />
                                 </div>
                             )}
                             
