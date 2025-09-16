@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ConsultationRequest } from '../App';
-import { UsersIcon, PencilIcon, PlusCircleIcon, TrashIcon, UserCircleIcon, IdCardIcon, ShareIcon, InboxIcon, CalendarIcon } from '../components/icons';
+import { UsersIcon, PencilIcon, PlusCircleIcon, TrashIcon, UserCircleIcon, IdCardIcon, ShareIcon, InboxIcon, CalendarIcon, ArrowTopRightOnSquareIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
@@ -135,6 +134,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
   };
+  
+  const handleViewPublicProfile = () => {
+    const publicProfileUrl = `${window.location.origin}/coach/${user.uid}`;
+    window.open(publicProfileUrl, '_blank', 'noopener,noreferrer');
+  };
 
   // Navigation handlers
   const viewMemberDetail = (member: Member) => {
@@ -172,17 +176,26 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Trainer Profile Card */}
-          <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+          <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
             <div className="flex items-center mb-4">
               <UserCircleIcon className="w-10 h-10 text-primary mr-4"/>
               <h2 className="text-xl font-bold text-white">내 프로필</h2>
             </div>
-            <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
-            <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
-            <p className="text-gray-400"><strong>연락처:</strong> {profile.contact || '미지정'}</p>
-            <button onClick={() => setIsProfileModalOpen(true)} className="mt-4 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
-              내 프로필 수정
-            </button>
+            <div className="flex-grow">
+                <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
+                <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
+                <p className="text-gray-400"><strong>연락처:</strong> {profile.contact || '미지정'}</p>
+            </div>
+            <div className="mt-4 flex flex-col space-y-2">
+                <button onClick={() => setIsProfileModalOpen(true)} className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2">
+                    <PencilIcon className="w-5 h-5"/>
+                    <span>내 프로필 수정</span>
+                </button>
+                <button onClick={handleViewPublicProfile} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2">
+                    <ArrowTopRightOnSquareIcon className="w-5 h-5 text-gray-300"/>
+                    <span>공개 프로필 보기</span>
+                </button>
+            </div>
           </div>
 
           {/* Action Cards */}
