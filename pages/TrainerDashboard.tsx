@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon, IdCardIcon, DocumentTextIcon } from '../components/icons';
+import { UsersIcon, CalendarIcon, ChatBubbleIcon, PencilIcon, TrashIcon, IdCardIcon, DocumentTextIcon, InboxIcon, ClockIcon } from '../components/icons';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
-import { UserProfile } from '../App';
+import { UserProfile, ConsultationRequest } from '../App';
 import MemberDetailView from './MemberDetailView';
 import ScheduleManager from './ScheduleManager';
 
@@ -28,7 +28,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [copiedProfile, setCopiedProfile] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
-  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [consultationRequests, setConsultationRequests] = useState<ConsultationRequest[]>([]);
+  const [loading, setLoading] = useState({ members: true, requests: true });
   const [error, setError] = useState<string | null>(null);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,25 +47,39 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
   const membersSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const querySnapshot = await db.collection('users').where('trainerId', '==', user.uid).get();
+    setInviteLink(`${window.location.origin}/signup/coach/${user.uid}`);
+    setPublicProfileLink(`${window.location.origin}/coach/${user.uid}`);
+
+    // Fetch members
+    const membersUnsub = db.collection('users').where('trainerId', '==', user.uid).onSnapshot(querySnapshot => {
         const memberData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...(doc.data() as Omit<UserProfile, 'role' | 'trainerId'>),
         }));
         setMembers(memberData);
-      } catch (err) {
+        setLoading(prev => ({ ...prev, members: false }));
+    }, (err) => {
         console.error("Error fetching members:", err);
         setError('회원 목록을 불러오는 데 실패했습니다.');
-      } finally {
-        setLoadingMembers(false);
-      }
+        setLoading(prev => ({ ...prev, members: false }));
+    });
+
+    // Fetch consultation requests
+    const requestsUnsub = db.collection('users').doc(user.uid).collection('consultationRequests')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snapshot => {
+        const requestData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...(doc.data() as Omit<ConsultationRequest, 'id'>)
+        }));
+        setConsultationRequests(requestData);
+        setLoading(prev => ({ ...prev, requests: false }));
+    });
+
+    return () => {
+        membersUnsub();
+        requestsUnsub();
     };
-    
-    setInviteLink(`${window.location.origin}/signup/coach/${user.uid}`);
-    setPublicProfileLink(`${window.location.origin}/coach/${user.uid}`);
-    fetchMembers();
   }, [user.uid]);
 
   const copyToClipboard = (link: 'invite' | 'profile') => {
@@ -94,12 +109,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
 
     try {
         await db.collection('users').doc(selectedMember.id).update(memberData);
-        const updatedMember = { ...selectedMember, ...memberData };
-        setMembers(prevMembers => 
-            prevMembers.map(m => m.id === selectedMember.id ? updatedMember : m)
-        );
+        // State update will be handled by the onSnapshot listener
         if (viewingMember?.id === selectedMember.id) {
-            setViewingMember(updatedMember);
+            setViewingMember(prev => prev ? ({ ...prev, ...memberData }) : null);
         }
         handleCloseEditModal();
     } catch (err: any) {
@@ -126,7 +138,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     setIsDeleting(true);
     try {
         await db.collection('users').doc(memberToDelete.id).delete();
-        setMembers(prevMembers => prevMembers.filter(m => m.id !== memberToDelete.id));
         handleCloseDeleteModal();
     } catch (err) {
         console.error("Error deleting member:", err);
@@ -160,6 +171,21 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     setViewingMember(null);
     setCurrentView('dashboard');
   }
+  
+  const timeSince = (date: firebase.firestore.Timestamp): string => {
+    const seconds = Math.floor((new Date().getTime() - date.toDate().getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "년 전";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "달 전";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "일 전";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "시간 전";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "분 전";
+    return "방금 전";
+  };
 
   const renderContent = () => {
     switch(currentView) {
@@ -259,12 +285,46 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                   </button>
               </div>
             </div>
+            
+            {/* Consultation Requests Section */}
+            <div className="mt-16">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center"><InboxIcon className="w-8 h-8 mr-3 text-primary" />상담 문의 내역</h2>
+              <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                  {loading.requests ? (
+                      <p className="text-gray-400">문의 내역을 불러오는 중...</p>
+                  ) : consultationRequests.length > 0 ? (
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
+                          {consultationRequests.map(req => (
+                              <div key={req.id} className="p-4 bg-dark rounded-md border border-gray-700">
+                                  <div className="flex justify-between items-start">
+                                      <div>
+                                          <p className="font-semibold text-lg text-white">{req.memberName}</p>
+                                          <p className="text-sm text-gray-400">{req.memberEmail}</p>
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                          <p className={`text-sm font-semibold px-2 py-0.5 rounded-full ${req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                              {req.status}
+                                          </p>
+                                          <p className="text-xs text-gray-500 mt-1 flex items-center justify-end">
+                                             <ClockIcon className="w-3 h-3 mr-1"/> {timeSince(req.createdAt)}
+                                          </p>
+                                      </div>
+                                  </div>
+                                  <p className="mt-3 text-gray-300 bg-dark-accent p-3 rounded-md">{req.message}</p>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <p className="text-gray-400">아직 받은 상담 문의가 없습니다.</p>
+                  )}
+              </div>
+            </div>
     
             {/* Member List Section */}
             <div ref={membersSectionRef} className="mt-16 scroll-mt-20">
               <h2 className="text-2xl font-bold text-white mb-6">내 회원 목록</h2>
               <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                  {loadingMembers ? (
+                  {loading.members ? (
                       <p className="text-gray-400">회원 목록을 불러오는 중...</p>
                   ) : error ? (
                       <p className="text-red-400">{error}</p>

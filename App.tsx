@@ -110,6 +110,16 @@ export interface Notification {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface ConsultationRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: firebase.firestore.Timestamp;
+}
+
 
 function App() {
   const [user, setUser] = useState<firebase.User | null>(null);
@@ -230,7 +240,12 @@ function App() {
   const renderContent = () => {
     if (legalPageView === 'terms') return <TermsOfService onBack={handleBackFromLegal} />;
     if (legalPageView === 'privacy') return <PrivacyPolicy onBack={handleBackFromLegal} />;
-    if (publicTrainerId) return <TrainerPublicProfile trainerId={publicTrainerId} onNavigateToSignup={handleNavigateToSignupFromProfile} />;
+    if (publicTrainerId) return <TrainerPublicProfile 
+        trainerId={publicTrainerId} 
+        onNavigateToSignup={handleNavigateToSignupFromProfile}
+        currentUserProfile={userProfile}
+        currentUser={user}
+    />;
 
     return user && userProfile ? (
         <AuthenticatedApp user={user} userProfile={userProfile} />

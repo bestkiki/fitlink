@@ -1,0 +1,103 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { db } from '../firebase';
+import { UserProfile } from '../App';
+import { ArrowLeftIcon, DumbbellIcon, MagnifyingGlassIcon, UserCircleIcon } from '../components/icons';
+
+interface FindTrainersPageProps {
+    onBack: () => void;
+}
+
+interface TrainerProfile extends UserProfile {
+    id: string;
+}
+
+const TrainerCard: React.FC<{ trainer: TrainerProfile }> = ({ trainer }) => (
+    <a href={`/coach/${trainer.id}`} className="block bg-dark-accent p-6 rounded-lg shadow-lg hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-1 group">
+        <div className="flex items-center space-x-4 mb-4">
+            <UserCircleIcon className="w-16 h-16 text-gray-500 group-hover:text-primary transition-colors"/>
+            <div>
+                <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">{trainer.name || '이름 미지정'}</h3>
+                <p className="text-sm text-gray-400">{trainer.email}</p>
+            </div>
+        </div>
+        <div>
+            <h4 className="font-semibold text-gray-300 flex items-center text-sm mb-2"><DumbbellIcon className="w-4 h-4 mr-2 text-primary"/>전문 분야</h4>
+            <p className="text-gray-400 text-sm line-clamp-2">{trainer.specialization || '전문 분야가 아직 등록되지 않았습니다.'}</p>
+        </div>
+    </a>
+);
+
+
+const FindTrainersPage: React.FC<FindTrainersPageProps> = ({ onBack }) => {
+    const [trainers, setTrainers] = useState<TrainerProfile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const fetchTrainers = async () => {
+            setLoading(true);
+            try {
+                const snapshot = await db.collection('users').where('role', '==', 'trainer').get();
+                const trainerData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as TrainerProfile));
+                setTrainers(trainerData);
+            } catch (err) {
+                console.error("Error fetching trainers:", err);
+                setError('트레이너 목록을 불러오는 데 실패했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTrainers();
+    }, []);
+
+    const filteredTrainers = useMemo(() => {
+        if (!searchTerm) return trainers;
+        const lowercasedTerm = searchTerm.toLowerCase();
+        return trainers.filter(trainer => 
+            trainer.name?.toLowerCase().includes(lowercasedTerm) ||
+            trainer.specialization?.toLowerCase().includes(lowercasedTerm)
+        );
+    }, [searchTerm, trainers]);
+
+    return (
+        <div className="container mx-auto px-6 py-12">
+            <button onClick={onBack} className="flex items-center space-x-2 text-secondary mb-6 hover:underline">
+                <ArrowLeftIcon className="w-5 h-5" />
+                <span>대시보드로 돌아가기</span>
+            </button>
+            <h1 className="text-3xl font-bold mb-2">트레이너 찾기</h1>
+            <p className="text-gray-400 mb-8">FitLink에 등록된 전문 트레이너들을 만나보세요.</p>
+
+            <div className="relative mb-8 max-w-lg">
+                <input
+                    type="text"
+                    placeholder="이름 또는 전문 분야로 검색..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full bg-dark-accent p-3 pl-10 rounded-lg text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary"
+                />
+                <MagnifyingGlassIcon className="w-5 h-5 text-gray-500 absolute top-1/2 left-3 transform -translate-y-1/2"/>
+            </div>
+
+            {loading ? (
+                <p>트레이너 목록을 불러오는 중...</p>
+            ) : error ? (
+                <p className="text-red-400">{error}</p>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {filteredTrainers.length > 0 ? (
+                        filteredTrainers.map(trainer => <TrainerCard key={trainer.id} trainer={trainer} />)
+                    ) : (
+                        <p className="text-gray-400 md:col-span-2 lg:col-span-3">검색 결과와 일치하는 트레이너가 없습니다.</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default FindTrainersPage;

@@ -3,20 +3,21 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon } from '../components/icons';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
 import MessageHistory from './MessageHistory';
 import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
 import AddDietLogModal from '../components/AddDietLogModal';
+import FindTrainersPage from './FindTrainersPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer';
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
@@ -228,6 +229,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   if (currentView === 'messages') {
       return <MessageHistory user={user} onBack={handleBackToDashboard} />;
   }
+  
+  if (currentView === 'find_trainer') {
+      return <FindTrainersPage onBack={handleBackToDashboard} />;
+  }
 
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
@@ -273,7 +278,13 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                         <p className="text-gray-400"><strong>연락처:</strong> {trainerProfile.contact}</p>
                     </>
                 ) : (
-                    <p className="text-gray-400">담당 트레이너가 아직 배정되지 않았습니다.</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <p className="text-gray-400 mb-4">담당 트레이너가 없습니다.</p>
+                        <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                            <MagnifyingGlassIcon className="w-6 h-6 text-secondary" />
+                            <span>트레이너 찾기</span>
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -286,6 +297,12 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                     <ChatBubbleIcon className="w-6 h-6 text-secondary" />
                     <span>메시지 내역 보기</span>
                 </button>
+                 {trainerProfile && (
+                     <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                        <MagnifyingGlassIcon className="w-6 h-6 text-secondary" />
+                        <span>다른 트레이너 보기</span>
+                    </button>
+                 )}
             </div>
         </div>
 

@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { UserCircleIcon, IdCardIcon, DumbbellIcon } from '../components/icons';
+import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon } from '../components/icons';
+import ConsultationRequestModal from '../components/ConsultationRequestModal';
 
 interface TrainerPublicProfileProps {
     trainerId: string;
     onNavigateToSignup: (trainerId: string) => void;
+    currentUserProfile: UserProfile | null;
+    currentUser: firebase.User | null;
 }
 
-const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, onNavigateToSignup }) => {
+const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, onNavigateToSignup, currentUserProfile, currentUser }) => {
     const [trainerProfile, setTrainerProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchTrainerProfile = async () => {
@@ -42,6 +47,38 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
         fetchTrainerProfile();
     }, [trainerId]);
 
+    const handleSendRequest = async (message: string) => {
+        if (!currentUser || !currentUserProfile || !trainerProfile) return;
+
+        try {
+            // Add consultation request
+            await db.collection('users').doc(trainerId).collection('consultationRequests').add({
+                memberId: currentUser.uid,
+                memberName: currentUserProfile.name || currentUser.email,
+                memberEmail: currentUser.email,
+                message: message,
+                status: 'pending',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Send notification to trainer
+            await db.collection('notifications').add({
+                userId: trainerId,
+                message: `${currentUserProfile.name || currentUser.email}님이 상담 문의를 보냈습니다.`,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert('상담 요청이 성공적으로 전송되었습니다.');
+            setIsModalOpen(false);
+
+        } catch (err) {
+            console.error("Error sending consultation request:", err);
+            throw new Error("요청 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+    };
+
+
     if (loading) {
         return <LoadingSpinner />;
     }
@@ -57,49 +94,68 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
     
     if (!trainerProfile) return null;
 
+    const isMember = currentUserProfile?.role === 'member';
+
     return (
-        <div className="min-h-[calc(100vh-160px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark">
-            <div className="max-w-2xl w-full space-y-8 bg-dark-accent p-8 sm:p-10 rounded-xl shadow-lg">
-                <div className="text-center">
-                    <UserCircleIcon className="w-24 h-24 mx-auto text-gray-500"/>
-                    <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-white">
-                        {trainerProfile.name || '트레이너'}
-                    </h2>
-                    <p className="mt-2 text-primary font-semibold">{trainerProfile.email}</p>
-                </div>
-                
-                <div className="space-y-6">
-                    {trainerProfile.specialization && (
-                        <div className="bg-dark p-4 rounded-lg">
-                            <h3 className="font-bold text-primary flex items-center mb-2"><DumbbellIcon className="w-5 h-5 mr-2"/>전문 분야</h3>
-                            <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.specialization}</p>
-                        </div>
-                    )}
-
-                    {trainerProfile.career && (
-                         <div className="bg-dark p-4 rounded-lg">
-                            <h3 className="font-bold text-primary flex items-center mb-2"><IdCardIcon className="w-5 h-5 mr-2"/>주요 경력</h3>
-                            <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.career}</p>
-                        </div>
-                    )}
+        <>
+            <div className="min-h-[calc(100vh-160px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark">
+                <div className="max-w-2xl w-full space-y-8 bg-dark-accent p-8 sm:p-10 rounded-xl shadow-lg">
+                    <div className="text-center">
+                        <UserCircleIcon className="w-24 h-24 mx-auto text-gray-500"/>
+                        <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-white">
+                            {trainerProfile.name || '트레이너'}
+                        </h2>
+                        <p className="mt-2 text-primary font-semibold">{trainerProfile.email}</p>
+                    </div>
                     
-                    {trainerProfile.contact && (
-                         <p className="text-center text-gray-400">
-                            <strong>연락처:</strong> {trainerProfile.contact}
-                         </p>
-                    )}
-                </div>
+                    <div className="space-y-6">
+                        {trainerProfile.specialization && (
+                            <div className="bg-dark p-4 rounded-lg">
+                                <h3 className="font-bold text-primary flex items-center mb-2"><DumbbellIcon className="w-5 h-5 mr-2"/>전문 분야</h3>
+                                <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.specialization}</p>
+                            </div>
+                        )}
 
-                <div>
-                    <button
-                        onClick={() => onNavigateToSignup(trainerId)}
-                        className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-primary-dark transition-transform transform hover:scale-105"
-                    >
-                       {trainerProfile.name || '트레이너'}님과 함께 운동하기
-                    </button>
+                        {trainerProfile.career && (
+                             <div className="bg-dark p-4 rounded-lg">
+                                <h3 className="font-bold text-primary flex items-center mb-2"><IdCardIcon className="w-5 h-5 mr-2"/>주요 경력</h3>
+                                <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.career}</p>
+                            </div>
+                        )}
+                        
+                        {trainerProfile.contact && (
+                             <p className="text-center text-gray-400">
+                                <strong>연락처:</strong> {trainerProfile.contact}
+                             </p>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col space-y-4">
+                        {isMember && (
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-secondary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-secondary transition-transform transform hover:scale-105"
+                            >
+                               <ChatBubbleIcon className="w-6 h-6 mr-3" />
+                               PT 체험 / 상담 신청하기
+                            </button>
+                        )}
+                        <button
+                            onClick={() => onNavigateToSignup(trainerId)}
+                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-primary-dark transition-transform transform hover:scale-105"
+                        >
+                           {trainerProfile.name || '트레이너'}님과 함께 운동하기
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+            <ConsultationRequestModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSend={handleSendRequest}
+                trainerName={trainerProfile.name || '트레이너'}
+            />
+        </>
     );
 };
 
