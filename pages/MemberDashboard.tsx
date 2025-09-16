@@ -1,15 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon } from '../components/icons';
+import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem } from '../App';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
 import MessageHistory from './MessageHistory';
 import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
+import AddDietLogModal from '../components/AddDietLogModal';
 
 interface MemberDashboardProps {
   user: firebase.User;
@@ -24,15 +24,21 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [personalExerciseLogs, setPersonalExerciseLogs] = useState<PersonalExerciseLog[]>([]);
+  const [dietLog, setDietLog] = useState<DietLog | null>(null);
   const [loading, setLoading] = useState({
     main: true,
     personalLogs: true,
+    dietLog: true,
   });
   
   const [currentView, setCurrentView] = useState<MemberDashboardView>('dashboard');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
   const [isPersonalLogModalOpen, setIsPersonalLogModalOpen] = useState(false);
   const [editingPersonalLog, setEditingPersonalLog] = useState<PersonalExerciseLog | null>(null);
+
+  const [isDietModalOpen, setIsDietModalOpen] = useState(false);
+  const [editingMealType, setEditingMealType] = useState<MealType | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,7 +87,23 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
             setPersonalExerciseLogs(data);
             setLoading(prev => ({ ...prev, personalLogs: false }));
         });
-    return () => personalLogsUnsub();
+    
+    // Fetch today's diet log
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dietLogUnsub = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr)
+        .onSnapshot(doc => {
+            if(doc.exists) {
+                setDietLog({ id: doc.id, ...doc.data() } as DietLog);
+            } else {
+                setDietLog(null);
+            }
+            setLoading(prev => ({ ...prev, dietLog: false }));
+        });
+
+    return () => {
+      personalLogsUnsub();
+      dietLogUnsub();
+    };
   }, [user.uid]);
 
   const handleSaveProfile = async (profileData: Partial<UserProfile>) => {
@@ -95,6 +117,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
     }
   };
 
+  // --- Personal Exercise Log Handlers ---
   const handleOpenPersonalLogModal = (log: PersonalExerciseLog | null) => {
     setEditingPersonalLog(log);
     setIsPersonalLogModalOpen(true);
@@ -124,6 +147,67 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
           await db.collection('users').doc(user.uid).collection('personalExerciseLogs').doc(logId).delete();
       }
   };
+  
+  // --- Diet Log Handlers ---
+  const handleOpenDietModal = (mealType: MealType) => {
+    setEditingMealType(mealType);
+    setIsDietModalOpen(true);
+  };
+
+  const handleSaveDietLog = async (foodName: string, calories: number) => {
+    if (!editingMealType) return;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const docRef = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr);
+
+    const newFoodItem: FoodItem = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      foodName,
+      calories
+    };
+
+    try {
+        const doc = await docRef.get();
+        if (doc.exists) {
+            await docRef.update({
+                [`meals.${editingMealType}`]: firebase.firestore.FieldValue.arrayUnion(newFoodItem),
+                totalCalories: firebase.firestore.FieldValue.increment(calories),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+        } else {
+            const initialMeals = { breakfast: [], lunch: [], dinner: [], snacks: [] };
+            initialMeals[editingMealType] = [newFoodItem];
+            await docRef.set({
+                date: todayStr,
+                meals: initialMeals,
+                totalCalories: calories,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+    } catch(error) {
+        console.error("Error saving diet log: ", error);
+        alert("식단 저장에 실패했습니다.");
+    } finally {
+        setIsDietModalOpen(false);
+        setEditingMealType(null);
+    }
+  };
+
+  const handleDeleteFoodItem = async (mealType: MealType, foodItem: FoodItem) => {
+      if(!dietLog) return;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const docRef = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr);
+
+      try {
+          await docRef.update({
+              [`meals.${mealType}`]: firebase.firestore.FieldValue.arrayRemove(foodItem),
+              totalCalories: firebase.firestore.FieldValue.increment(-foodItem.calories),
+          });
+      } catch (error) {
+          console.error("Error deleting food item: ", error);
+          alert("식단 삭제에 실패했습니다.");
+      }
+  };
 
   const handleBackToDashboard = () => setCurrentView('dashboard');
   
@@ -136,6 +220,13 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   }
 
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const mealTypes: { key: MealType, name: string }[] = [
+      { key: 'breakfast', name: '아침' },
+      { key: 'lunch', name: '점심' },
+      { key: 'dinner', name: '저녁' },
+      { key: 'snacks', name: '간식' },
+  ];
 
   return (
     <>
@@ -188,19 +279,60 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
             </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg lg:col-span-2">
                 <div className="flex items-center mb-4">
                     <ChartBarIcon className="w-8 h-8 text-secondary mr-3" />
                     <h2 className="text-xl font-bold text-white">나의 성장 기록</h2>
                 </div>
                 <ProgressChart measurements={sortedMeasurements} />
             </div>
+            
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-white flex items-center"><FireIcon className="w-6 h-6 mr-2 text-secondary"/>오늘의 식단</h2>
+                    <div className="text-right">
+                        <p className="text-2xl font-bold text-secondary">{dietLog?.totalCalories || 0}</p>
+                        <p className="text-sm text-gray-400">kcal</p>
+                    </div>
+                </div>
+                <div className="space-y-4 max-h-80 overflow-y-auto">
+                    {loading.dietLog ? (
+                        <p className="text-gray-400">식단 기록을 불러오는 중...</p>
+                    ) : (
+                        mealTypes.map(meal => (
+                            <div key={meal.key}>
+                                <div className="flex justify-between items-center mb-1">
+                                    <h3 className="font-semibold text-gray-300">{meal.name}</h3>
+                                    <button onClick={() => handleOpenDietModal(meal.key)} className="p-1 text-secondary hover:text-orange-400">
+                                        <PlusCircleIcon className="w-5 h-5"/>
+                                    </button>
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                    {dietLog?.meals[meal.key] && dietLog.meals[meal.key].length > 0 ? (
+                                        dietLog.meals[meal.key].map(food => (
+                                            <div key={food.id} className="flex justify-between items-center bg-dark p-2 rounded">
+                                                <span className="text-gray-300">{food.foodName}</span>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-gray-400">{food.calories} kcal</span>
+                                                    <button onClick={() => handleDeleteFoodItem(meal.key, food)} className="p-0.5"><TrashIcon className="w-4 h-4 text-gray-500 hover:text-red-400"/></button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-gray-500 px-2">기록된 {meal.name} 식단이 없습니다.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
 
-            <div className="space-y-8">
+            <div className="mt-8 space-y-8 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
                 <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                     <h2 className="text-xl font-bold text-white mb-4 flex items-center"><DocumentTextIcon className="w-6 h-6 mr-3 text-secondary"/>트레이너 할당 운동</h2>
-                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
                         {loading.main ? (
                             <p className="text-gray-400">운동 일지를 불러오는 중...</p>
                         ) : exerciseLogs.length > 0 ? (
@@ -229,7 +361,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                             <span>기록 추가</span>
                         </button>
                     </div>
-                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
                          {loading.personalLogs ? (
                             <p className="text-gray-400">개인 운동 일지를 불러오는 중...</p>
                         ) : personalExerciseLogs.length > 0 ? (
@@ -268,9 +400,15 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       />
       <AddEditPersonalLogModal
         isOpen={isPersonalLogModalOpen}
-        onClose={() => setIsPersonalLogModalOpen(false)}
+        onClose={() => {setIsPersonalLogModalOpen(false); setEditingPersonalLog(null);}}
         onSave={handleSavePersonalLog}
         log={editingPersonalLog}
+      />
+      <AddDietLogModal
+        isOpen={isDietModalOpen}
+        onClose={() => setIsDietModalOpen(false)}
+        onSave={handleSaveDietLog}
+        mealType={editingMealType}
       />
     </>
   );

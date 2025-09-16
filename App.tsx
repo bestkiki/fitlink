@@ -54,6 +54,27 @@ export interface BodyMeasurement {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+
+export interface FoodItem {
+  id: string;
+  foodName: string;
+  calories: number;
+}
+
+export interface DietLog {
+  id: string; // YYYY-MM-DD
+  date: string;
+  meals: {
+    breakfast: FoodItem[];
+    lunch: FoodItem[];
+    dinner: FoodItem[];
+    snacks: FoodItem[];
+  };
+  totalCalories: number;
+  updatedAt: firebase.firestore.Timestamp;
+}
+
 export interface Availability {
   id: string;
   startTime: firebase.firestore.Timestamp;
