@@ -38,6 +38,14 @@ export interface ExerciseLog {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface PersonalExerciseLog {
+  id: string;
+  date: string; // ISO String for date
+  exerciseName: string;
+  sets: ExerciseSet[];
+  createdAt: firebase.firestore.Timestamp;
+}
+
 export interface BodyMeasurement {
   id: string;
   date: string; // ISO String for date
