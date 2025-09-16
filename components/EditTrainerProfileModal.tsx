@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { UserProfile } from '../App';
+import { CameraIcon, UserCircleIcon } from './icons';
 
 interface EditTrainerProfileModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (profileData: Partial<UserProfile>) => Promise<void>;
+    onSave: (profileData: Partial<UserProfile>, profileImageFile?: File | null, promoImageFile?: File | null) => Promise<void>;
     userProfile: UserProfile;
 }
 
@@ -14,6 +15,12 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
     const [contact, setContact] = useState('');
     const [specialization, setSpecialization] = useState('');
     const [career, setCareer] = useState('');
+    
+    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const [promoImageFile, setPromoImageFile] = useState<File | null>(null);
+    const [promoImagePreview, setPromoImagePreview] = useState<string | null>(null);
+
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -23,10 +30,29 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
             setContact(userProfile.contact || '');
             setSpecialization(userProfile.specialization || '');
             setCareer(userProfile.career || '');
+            setProfileImagePreview(userProfile.profileImageUrl || null);
+            setPromoImagePreview(userProfile.promoImageUrl || null);
         }
+        // Reset file inputs and errors on open
+        setProfileImageFile(null);
+        setPromoImageFile(null);
         setError('');
         setIsSaving(false);
     }, [userProfile, isOpen]);
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'promo') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const previewUrl = URL.createObjectURL(file);
+            if (type === 'profile') {
+                setProfileImageFile(file);
+                setProfileImagePreview(previewUrl);
+            } else {
+                setPromoImageFile(file);
+                setPromoImagePreview(previewUrl);
+            }
+        }
+    };
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -43,7 +69,7 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
                 contact,
                 specialization,
                 career,
-            });
+            }, profileImageFile, promoImageFile);
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
         } finally {
@@ -56,28 +82,68 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
             <div className="space-y-4">
                 {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-md">{error}</p>}
                 
-                <div>
-                    <label htmlFor="trainer-name" className="block text-sm font-medium text-gray-300 mb-1">이름 <span className="text-red-400">*</span></label>
-                    <input
-                        type="text"
-                        id="trainer-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
-                        required
-                    />
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    {/* Profile Image Upload */}
+                    <div className="flex-shrink-0">
+                        <label htmlFor="profile-image-upload" className="cursor-pointer group relative">
+                            {profileImagePreview ? (
+                                <img src={profileImagePreview} alt="프로필 미리보기" className="w-24 h-24 rounded-full object-cover border-2 border-gray-600 group-hover:opacity-70" />
+                            ) : (
+                                <UserCircleIcon className="w-24 h-24 text-gray-500 group-hover:opacity-70" />
+                            )}
+                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <CameraIcon className="w-8 h-8 text-white" />
+                            </div>
+                        </label>
+                        <input id="profile-image-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'profile')} />
+                    </div>
+                    {/* Name and Contact */}
+                    <div className="w-full space-y-4">
+                        <div>
+                            <label htmlFor="trainer-name" className="block text-sm font-medium text-gray-300 mb-1">이름 <span className="text-red-400">*</span></label>
+                            <input
+                                type="text"
+                                id="trainer-name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="trainer-contact" className="block text-sm font-medium text-gray-300 mb-1">연락처</label>
+                            <input
+                                type="tel"
+                                id="trainer-contact"
+                                value={contact}
+                                onChange={(e) => setContact(e.target.value)}
+                                className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="예: 010-1234-5678"
+                            />
+                        </div>
+                    </div>
                 </div>
+
+                {/* Promo Image Upload */}
                 <div>
-                    <label htmlFor="trainer-contact" className="block text-sm font-medium text-gray-300 mb-1">연락처</label>
-                    <input
-                        type="tel"
-                        id="trainer-contact"
-                        value={contact}
-                        onChange={(e) => setContact(e.target.value)}
-                        className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="예: 010-1234-5678"
-                    />
+                    <label htmlFor="promo-image-upload" className="block text-sm font-medium text-gray-300 mb-1">홍보 프로필 소개 이미지</label>
+                    <p className="text-xs text-gray-500 mb-2">모바일 화면에 최적화된 세로형 이미지를 권장합니다. (9:16 비율)</p>
+                     <label htmlFor="promo-image-upload" className="cursor-pointer group relative block w-full aspect-[9/16] max-w-xs mx-auto bg-dark rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center text-gray-500 hover:border-primary">
+                        {promoImagePreview ? (
+                            <img src={promoImagePreview} alt="홍보 이미지 미리보기" className="w-full h-full object-cover rounded-md group-hover:opacity-70" />
+                        ) : (
+                            <div className="text-center">
+                                <CameraIcon className="w-10 h-10 mx-auto"/>
+                                <p className="mt-1 text-sm">클릭하여 이미지 업로드</p>
+                            </div>
+                        )}
+                         <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <CameraIcon className="w-8 h-8 text-white" />
+                            </div>
+                    </label>
+                    <input id="promo-image-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'promo')} />
                 </div>
+                 
                  <div>
                     <label htmlFor="specialization" className="block text-sm font-medium text-gray-300 mb-1">전문 분야</label>
                     <textarea

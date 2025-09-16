@@ -128,39 +128,53 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
     return (
         <>
             <div className="min-h-[calc(100vh-160px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark">
-                <div className="max-w-2xl w-full space-y-8 bg-dark-accent p-8 sm:p-10 rounded-xl shadow-lg">
-                    <div className="text-center">
-                        <UserCircleIcon className="w-24 h-24 mx-auto text-gray-500"/>
-                        <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-white">
-                            {trainerProfile.name || '트레이너'}
-                        </h2>
-                        <p className="mt-2 text-primary font-semibold">{trainerProfile.email}</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        {trainerProfile.specialization && (
-                            <div className="bg-dark p-4 rounded-lg">
-                                <h3 className="font-bold text-primary flex items-center mb-2"><DumbbellIcon className="w-5 h-5 mr-2"/>전문 분야</h3>
-                                <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.specialization}</p>
-                            </div>
-                        )}
+                <div className="max-w-md w-full space-y-8 bg-dark-accent rounded-xl shadow-lg overflow-hidden">
+                    {trainerProfile.promoImageUrl && (
+                        <div className="h-48">
+                            <img src={trainerProfile.promoImageUrl} alt="Promotional banner" className="w-full h-full object-cover" />
+                        </div>
+                    )}
 
-                        {trainerProfile.career && (
-                             <div className="bg-dark p-4 rounded-lg">
-                                <h3 className="font-bold text-primary flex items-center mb-2"><IdCardIcon className="w-5 h-5 mr-2"/>주요 경력</h3>
-                                <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.career}</p>
+                    <div className="px-8 pb-8 space-y-8">
+                        <div className={`text-center ${trainerProfile.promoImageUrl ? '-mt-24' : ''}`}>
+                            <div className="relative inline-block">
+                                {trainerProfile.profileImageUrl ? (
+                                    <img src={trainerProfile.profileImageUrl} alt="Trainer" className="w-28 h-28 mx-auto rounded-full object-cover border-4 border-dark-accent"/>
+                                ) : (
+                                    <UserCircleIcon className="w-28 h-28 mx-auto text-gray-500"/>
+                                )}
                             </div>
-                        )}
+                            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-white">
+                                {trainerProfile.name || '트레이너'}
+                            </h2>
+                            <p className="mt-2 text-primary font-semibold">{trainerProfile.email}</p>
+                        </div>
                         
-                        {trainerProfile.contact && (
-                             <p className="text-center text-gray-400">
-                                <strong>연락처:</strong> {trainerProfile.contact}
-                             </p>
-                        )}
-                    </div>
+                        <div className="space-y-6">
+                            {trainerProfile.specialization && (
+                                <div className="bg-dark p-4 rounded-lg">
+                                    <h3 className="font-bold text-primary flex items-center mb-2"><DumbbellIcon className="w-5 h-5 mr-2"/>전문 분야</h3>
+                                    <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.specialization}</p>
+                                </div>
+                            )}
 
-                    <div className="pt-4">
-                        {renderActionButtons()}
+                            {trainerProfile.career && (
+                                <div className="bg-dark p-4 rounded-lg">
+                                    <h3 className="font-bold text-primary flex items-center mb-2"><IdCardIcon className="w-5 h-5 mr-2"/>주요 경력</h3>
+                                    <p className="text-gray-300 whitespace-pre-wrap">{trainerProfile.career}</p>
+                                </div>
+                            )}
+                            
+                            {trainerProfile.contact && (
+                                <p className="text-center text-gray-400">
+                                    <strong>연락처:</strong> {trainerProfile.contact}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="pt-4">
+                            {renderActionButtons()}
+                        </div>
                     </div>
                 </div>
             </div>

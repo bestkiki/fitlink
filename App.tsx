@@ -20,6 +20,8 @@ export interface UserProfile {
   email: string;
   name?: string;
   contact?: string;
+  profileImageUrl?: string;
+  promoImageUrl?: string;
   // Member specific
   goal?: string;
   trainerId?: string;

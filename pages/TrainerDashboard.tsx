@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { UserProfile, ConsultationRequest } from '../App';
 // FIX: Imported TrashIcon to resolve reference error.
 import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon } from '../components/icons';
@@ -65,10 +65,31 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         };
     }, [user.uid]);
     
-    const handleSaveProfile = async (profileData: Partial<UserProfile>) => {
+    const handleSaveProfile = async (
+        profileData: Partial<UserProfile>, 
+        profileImageFile?: File | null, 
+        promoImageFile?: File | null
+    ) => {
         try {
-            await db.collection('users').doc(user.uid).update(profileData);
-            setProfile(prevProfile => ({ ...prevProfile, ...profileData }));
+            const uploadImage = async (file: File, path: string): Promise<string> => {
+                const storageRef = storage.ref(path);
+                const snapshot = await storageRef.put(file);
+                return snapshot.ref.getDownloadURL();
+            };
+
+            const dataToUpdate = { ...profileData };
+
+            if (profileImageFile) {
+                const imageUrl = await uploadImage(profileImageFile, `profile_images/${user.uid}`);
+                dataToUpdate.profileImageUrl = imageUrl;
+            }
+            if (promoImageFile) {
+                const imageUrl = await uploadImage(promoImageFile, `promo_images/${user.uid}`);
+                dataToUpdate.promoImageUrl = imageUrl;
+            }
+
+            await db.collection('users').doc(user.uid).update(dataToUpdate);
+            setProfile(prevProfile => ({ ...prevProfile, ...dataToUpdate }));
             setIsProfileModalOpen(false);
         } catch (err: any) {
             console.error("Error updating profile:", err);
@@ -153,7 +174,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
                     <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
                         <div className="flex items-center mb-4">
-                            <UserCircleIcon className="w-10 h-10 text-primary mr-4"/>
+                            {profile.profileImageUrl ? (
+                                <img src={profile.profileImageUrl} alt="Profile" className="w-16 h-16 rounded-full mr-4 object-cover"/>
+                            ) : (
+                                <UserCircleIcon className="w-16 h-16 text-primary mr-4"/>
+                            )}
                             <h2 className="text-xl font-bold text-white">내 프로필</h2>
                         </div>
                         <div className="flex-grow">
