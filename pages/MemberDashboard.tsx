@@ -259,26 +259,28 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                     <UserCircleIcon className="w-10 h-10 text-secondary mr-4"/>
                     <h2 className="text-xl font-bold text-white">내 정보</h2>
                 </div>
-                <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
-                <p className="text-gray-400"><strong>운동 목표:</strong> {profile.goal || '미지정'}</p>
-                <button onClick={() => setIsProfileModalOpen(true)} className="mt-auto bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
+                <div className="flex-grow">
+                    <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
+                    <p className="text-gray-400"><strong>운동 목표:</strong> {profile.goal || '미지정'}</p>
+                </div>
+                <button onClick={() => setIsProfileModalOpen(true)} className="mt-4 bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
                     내 정보 수정
                 </button>
             </div>
 
-            <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
                 <div className="flex items-center mb-4">
                     <IdCardIcon className="w-10 h-10 text-secondary mr-4"/>
                     <h2 className="text-xl font-bold text-white">담당 트레이너</h2>
                 </div>
                 {trainerProfile ? (
-                    <>
+                    <div className="flex-grow">
                         <p className="text-gray-400"><strong>이름:</strong> {trainerProfile.name}</p>
                         <p className="text-gray-400"><strong>전문 분야:</strong> {trainerProfile.specialization}</p>
                         <p className="text-gray-400"><strong>연락처:</strong> {trainerProfile.contact}</p>
-                    </>
+                    </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="flex flex-col items-center justify-center flex-grow text-center">
                         <p className="text-gray-400 mb-4">담당 트레이너가 없습니다.</p>
                         <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                             <MagnifyingGlassIcon className="w-6 h-6 text-secondary" />

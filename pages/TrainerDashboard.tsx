@@ -3,13 +3,14 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ConsultationRequest } from '../App';
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon } from '../components/icons';
+// FIX: Imported TrashIcon to resolve reference error.
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import MemberDetailView from './MemberDetailView';
 import ScheduleManager from './ScheduleManager';
-import InviteMemberModal from '../components/InviteMemberModal';
+import ShareProfileModal from '../components/InviteMemberModal';
 import ConsultationRequestsModal from '../components/ConsultationRequestsModal';
 
 export interface Member extends UserProfile {
@@ -38,7 +39,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     const [editingMember, setEditingMember] = useState<Member | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingMember, setDeletingMember] = useState<Member | null>(null);
-    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
 
     useEffect(() => {
@@ -128,14 +129,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [members, searchTerm]);
-
-    const publicProfileUrl = `${window.location.origin}/coach/${user.uid}`;
     
-    const copyPublicProfileUrl = () => {
-        navigator.clipboard.writeText(publicProfileUrl);
-        alert('공개 프로필 URL이 복사되었습니다.');
-    };
-
     if (currentView === 'memberDetail' && selectedMember) {
         return <MemberDetailView 
             member={selectedMember} 
@@ -162,45 +156,61 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             <UserCircleIcon className="w-10 h-10 text-primary mr-4"/>
                             <h2 className="text-xl font-bold text-white">내 프로필</h2>
                         </div>
-                        <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
-                        <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
-                        <button onClick={() => setIsProfileModalOpen(true)} className="mt-auto bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
-                            내 프로필 수정
-                        </button>
+                        <div className="flex-grow">
+                            <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
+                            <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
+                            <p className="text-gray-400"><strong>연락처:</strong> {profile.contact || '미지정'}</p>
+                        </div>
+                        <div className="space-y-2 mt-4">
+                            <button onClick={() => setIsProfileModalOpen(true)} className="flex items-center justify-center space-x-2 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">
+                                <PencilIcon className="w-5 h-5"/>
+                                <span>내 프로필 수정</span>
+                            </button>
+                             <a href={`/coach/${user.uid}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center space-x-2 bg-dark hover:bg-dark/70 text-white font-bold py-2 px-4 rounded-lg transition-colors w-full border border-gray-600">
+                                <ArrowTopRightOnSquareIcon className="w-5 h-5"/>
+                                <span>공개 프로필 보기</span>
+                            </a>
+                        </div>
                     </div>
-
-                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col space-y-4">
-                        <button onClick={() => setIsInviteModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                            <PlusCircleIcon className="w-6 h-6 text-primary" />
-                            <span>회원 초대하기</span>
-                        </button>
-                        <button onClick={copyPublicProfileUrl} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                    
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col justify-center space-y-4">
+                        <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                             <ShareIcon className="w-6 h-6 text-primary" />
-                            <span>공개 프로필 공유</span>
+                            <span>초대 및 공유</span>
                         </button>
-                    </div>
-
-                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col space-y-4">
                         <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                             <CalendarIcon className="w-6 h-6 text-primary" />
                             <span>스케줄 관리</span>
                         </button>
-                        <button onClick={() => setIsConsultationModalOpen(true)} className="relative w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                            <EnvelopeIcon className="w-6 h-6 text-primary" />
-                            <span>상담 요청 확인</span>
-                            {consultationRequests.length > 0 && (
-                                <span className="absolute top-0 right-0 -mt-2 -mr-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{consultationRequests.length}</span>
+                    </div>
+
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+                        <div className="flex items-center mb-4">
+                            <InboxArrowDownIcon className="w-10 h-10 text-primary mr-4"/>
+                            <h2 className="text-xl font-bold text-white">PT 상담 요청</h2>
+                        </div>
+                        <div className="flex-grow flex flex-col items-center justify-center text-center">
+                            {consultationRequests.length > 0 ? (
+                                <>
+                                    <p className="text-5xl font-bold text-primary">{consultationRequests.length}</p>
+                                    <p className="text-gray-400 mt-2">개의 새로운 상담 요청이 있습니다.</p>
+                                </>
+                            ) : (
+                                <p className="text-gray-500">새로운 상담 요청이 없습니다.</p>
                             )}
+                        </div>
+                        <button onClick={() => setIsConsultationModalOpen(true)} className="mt-4 bg-dark hover:bg-dark/70 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors w-full border border-gray-600">
+                            상담 내역 관리
                         </button>
                     </div>
                 </div>
 
                 <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-white flex items-center mb-4 sm:mb-0"><UsersIcon className="w-8 h-8 mr-3"/>내 회원 목록</h2>
+                        <h2 className="text-2xl font-bold text-white flex items-center mb-4 sm:mb-0"><UsersIcon className="w-8 h-8 mr-3"/>담당 회원 목록</h2>
                         <input
                             type="text"
-                            placeholder="회원 검색..."
+                            placeholder="회원 이름 또는 이메일로 검색"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full sm:w-64 bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -227,14 +237,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                             <td className="p-3 text-gray-400 hidden md:table-cell">{member.email}</td>
                                             <td className="p-3 text-gray-400 hidden lg:table-cell truncate max-w-xs">{member.goal || '-'}</td>
                                             <td className="p-3 text-right">
-                                                <button onClick={() => handleSelectMember(member)} className="text-primary hover:underline mr-4 text-sm font-semibold">상세보기</button>
-                                                <button onClick={() => handleOpenAddEditModal(member)} className="text-gray-400 hover:text-white mr-2 p-1"><PencilIcon className="w-5 h-5"/></button>
-                                                <button onClick={() => handleOpenDeleteModal(member)} className="text-gray-400 hover:text-red-400 p-1"><UsersIcon className="w-5 h-5"/></button>
+                                                <button onClick={() => handleSelectMember(member)} className="text-primary hover:underline mr-4 text-sm font-semibold">기록 관리</button>
+                                                <button onClick={() => handleOpenAddEditModal(member)} className="text-gray-400 hover:text-white mr-2 p-1" title="프로필 수정"><PencilIcon className="w-5 h-5"/></button>
+                                                <button onClick={() => handleOpenDeleteModal(member)} className="text-gray-400 hover:text-red-400 p-1" title="회원 삭제"><TrashIcon className="w-5 h-5"/></button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={4} className="text-center p-4 text-gray-500">표시할 회원이 없습니다.</td></tr>
+                                    <tr><td colSpan={4} className="text-center p-4 text-gray-500">담당 회원이 없습니다. '초대 및 공유' 버튼으로 회원을 초대해보세요.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -258,12 +268,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDeleteMember}
-                isDeleting={false} // You might want to add loading state for deletion
+                isDeleting={false}
                 memberName={deletingMember?.name || ''}
             />
-            <InviteMemberModal
-                isOpen={isInviteModalOpen}
-                onClose={() => setIsInviteModalOpen(false)}
+            <ShareProfileModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
                 trainerId={user.uid}
             />
             <ConsultationRequestsModal
