@@ -18,65 +18,69 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let isMounted = true;
+
         const fetchTrainerProfile = async () => {
             setLoading(true);
             setError(null);
             try {
-                // First, try with the default instance. This will work for logged-in users with permission.
+                // First, try with the default instance. This will work for logged-in users.
                 const doc = await db.collection('users').doc(trainerId).get();
                 if (doc.exists) {
                     const data = doc.data() as UserProfile;
                     if (data.role === 'trainer') {
-                        setTrainerProfile(data);
+                        if (isMounted) setTrainerProfile(data);
                     } else {
-                        setError('해당 사용자는 트레이너가 아닙니다.');
+                        if (isMounted) setError('해당 사용자는 트레이너가 아닙니다.');
                     }
                 } else {
-                    setError('트레이너 프로필을 찾을 수 없습니다.');
+                    if (isMounted) setError('트레이너 프로필을 찾을 수 없습니다.');
                 }
             } catch (err: any) {
-                // If it fails with permission denied, and we are logged out, try with an anonymous user on a temporary app instance.
+                // If it fails (likely permission denied) and the user is logged out,
+                // try with a temporary, isolated anonymous session.
                 if ((err.code === 'permission-denied' || err.code === 'PERMISSION_DENIED') && !auth.currentUser) {
-                    const tempAppName = 'public-profile-fetch';
-                    let tempApp;
-                    try {
-                        tempApp = firebase.app(tempAppName);
-                    } catch (e) {
-                        tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
-                    }
+                    const tempAppName = `public-profile-fetch-${Date.now()}`;
+                    const tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
 
                     try {
                         const tempAuth = tempApp.auth();
-                        if (!tempAuth.currentUser) {
-                           await tempAuth.signInAnonymously();
-                        }
+                        await tempAuth.signInAnonymously();
+                        
                         const tempDb = tempApp.firestore();
                         const doc = await tempDb.collection('users').doc(trainerId).get();
 
                         if (doc.exists) {
                             const data = doc.data() as UserProfile;
                             if (data.role === 'trainer') {
-                                setTrainerProfile(data);
+                                if (isMounted) setTrainerProfile(data);
                             } else {
-                                setError('해당 사용자는 트레이너가 아닙니다.');
+                                if (isMounted) setError('해당 사용자는 트레이너가 아닙니다.');
                             }
                         } else {
-                            setError('트레이너 프로필을 찾을 수 없습니다.');
+                            if (isMounted) setError('트레이너 프로필을 찾을 수 없습니다.');
                         }
                     } catch (tempErr) {
                         console.error("Error fetching trainer profile with temp auth:", tempErr);
-                        setError('프로필을 불러오는 중 오류가 발생했습니다.');
+                        if (isMounted) setError('프로필을 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
+                    } finally {
+                        // Clean up the temporary app and its services.
+                        await tempApp.delete();
                     }
                 } else {
                     console.error("Error fetching trainer profile:", err);
-                    setError('프로필을 불러오는 중 오류가 발생했습니다.');
+                    if (isMounted) setError('프로필을 불러오는 중 오류가 발생했습니다.');
                 }
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         fetchTrainerProfile();
+
+        return () => {
+            isMounted = false;
+        };
     }, [trainerId]);
 
     if (loading) {
