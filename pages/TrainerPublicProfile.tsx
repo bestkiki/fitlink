@@ -97,7 +97,33 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
     
     if (!trainerProfile) return null;
 
-    const isMember = currentUserProfile?.role === 'member';
+    const renderActionButtons = () => {
+        // Case 1: Logged-in Member
+        if (currentUserProfile?.role === 'member') {
+            return (
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-secondary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-secondary transition-transform transform hover:scale-105"
+                >
+                   <ChatBubbleIcon className="w-6 h-6 mr-3" />
+                   PT 체험 / 상담 신청하기
+                </button>
+            );
+        }
+        // Case 2: Logged-out User
+        if (!currentUser) {
+            return (
+                <button
+                    onClick={() => onNavigateToSignup(trainerId)}
+                    className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-primary-dark transition-transform transform hover:scale-105"
+                >
+                   {trainerProfile.name || '트레이너'}님과 함께 운동하기
+                </button>
+            );
+        }
+        // Case 3: Logged-in Trainer - show nothing
+        return null;
+    };
 
     return (
         <>
@@ -133,22 +159,8 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                         )}
                     </div>
 
-                    <div className="flex flex-col space-y-4">
-                        {isMember && (
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-secondary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-secondary transition-transform transform hover:scale-105"
-                            >
-                               <ChatBubbleIcon className="w-6 h-6 mr-3" />
-                               PT 체험 / 상담 신청하기
-                            </button>
-                        )}
-                        <button
-                            onClick={() => onNavigateToSignup(trainerId)}
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-primary-dark transition-transform transform hover:scale-105"
-                        >
-                           {trainerProfile.name || '트레이너'}님과 함께 운동하기
-                        </button>
+                    <div className="pt-4">
+                        {renderActionButtons()}
                     </div>
                 </div>
             </div>
