@@ -5,7 +5,7 @@ import 'firebase/compat/auth';
 import { db, auth } from '../firebase';
 import { Member } from './TrainerDashboard';
 import { ExerciseLog, BodyMeasurement, ExerciseSet, DietLog, MealType, PersonalExerciseLog, Feedback } from '../App';
-import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DocumentTextIcon, FireIcon, ClipboardListIcon, ChatBubbleLeftRightIcon } from '../components/icons';
+import { ArrowLeftIcon, PencilIcon, PlusCircleIcon, TrashIcon, ChartBarIcon, DocumentTextIcon, FireIcon, ClipboardListIcon, ChatBubbleLeftRightIcon, UsersIcon } from '../components/icons';
 import Modal from '../components/Modal';
 import ProgressChart from '../components/ProgressChart';
 
@@ -218,7 +218,8 @@ interface MemberDetailViewProps {
     onEditProfile: () => void;
 }
 
-const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onEditProfile }) => {
+const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member: initialMember, onBack, onEditProfile }) => {
+    const [member, setMember] = useState<Member>(initialMember);
     const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
     const [personalExerciseLogs, setPersonalExerciseLogs] = useState<PersonalExerciseLog[]>([]);
     const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
@@ -233,6 +234,12 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
 
     useEffect(() => {
         const memberRef = db.collection('users').doc(member.id);
+
+        const unsubMember = memberRef.onSnapshot(doc => {
+            if (doc.exists) {
+                setMember({ id: doc.id, ...doc.data() } as Member);
+            }
+        });
 
         const unsubLogs = memberRef.collection('exerciseLogs').orderBy('createdAt', 'desc').onSnapshot(snap => {
             setExerciseLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog)));
@@ -267,6 +274,7 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
         });
 
         return () => {
+            unsubMember();
             unsubLogs();
             unsubMeasurements();
             unsubPersonalLogs();
@@ -378,6 +386,21 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
         }
     };
 
+    const handleDeductSession = async () => {
+        if (remainingSessions <= 0) return;
+
+        if (window.confirm("수업 1회를 차감하시겠습니까?")) {
+            try {
+                await db.collection('users').doc(member.id).update({
+                    usedSessions: firebase.firestore.FieldValue.increment(1)
+                });
+            } catch (error) {
+                console.error("Error deducting session:", error);
+                alert("세션 차감에 실패했습니다.");
+            }
+        }
+    };
+
     const mealTypes: { key: MealType, name: string }[] = [
       { key: 'breakfast', name: '아침' },
       { key: 'lunch', name: '점심' },
@@ -386,6 +409,11 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
     ];
     
     const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const totalSessions = member.totalSessions || 0;
+    const usedSessions = member.usedSessions || 0;
+    const remainingSessions = totalSessions - usedSessions;
+    const progressPercentage = totalSessions > 0 ? (usedSessions / totalSessions) * 100 : 0;
 
 
     return (
@@ -420,9 +448,42 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                     {/* Session Management */}
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg lg:col-span-1">
+                        <h2 className="text-xl font-bold text-white flex items-center mb-4"><UsersIcon className="w-6 h-6 mr-3 text-primary"/>수업 세션 관리</h2>
+                        {totalSessions > 0 ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <span className="text-gray-400">진행률</span>
+                                        <span className="font-bold text-white">
+                                            <span className="text-3xl text-primary">{remainingSessions}</span>
+                                            <span className="text-gray-400"> / {totalSessions}회 남음</span>
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-dark rounded-full h-2.5">
+                                        <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleDeductSession}
+                                    disabled={remainingSessions <= 0}
+                                    className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                >
+                                    수업 1회 차감
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 py-8">
+                                <p>등록된 세션이 없습니다.</p>
+                                <button onClick={onEditProfile} className="text-primary hover:underline mt-2 text-sm">프로필 수정에서 세션 추가하기</button>
+                            </div>
+                        )}
+                    </div>
+                    
                     {/* Progress Section */}
-                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg lg:col-span-2">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-white flex items-center"><ChartBarIcon className="w-6 h-6 mr-3 text-primary"/>성장 기록</h2>
                             <button onClick={() => handleOpenMeasurementModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
@@ -447,7 +508,9 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                             ))}
                         </div>
                     </div>
+                </div>
 
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Exercise Logs */}
                     <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                         <div className="flex justify-between items-center mb-4">
@@ -477,10 +540,8 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                             )) : <p className="text-gray-400">운동 기록이 없습니다.</p>}
                         </div>
                     </div>
-                </div>
 
-                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Personal Exercise Logs */}
+                     {/* Personal Exercise Logs */}
                     <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                         <h2 className="text-xl font-bold text-white mb-4 flex items-center"><ClipboardListIcon className="w-6 h-6 mr-3 text-primary"/>회원 개인 운동 기록</h2>
                         <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -502,7 +563,7 @@ const MemberDetailView: React.FC<MemberDetailViewProps> = ({ member, onBack, onE
                     </div>
 
                     {/* Diet Logs */}
-                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
+                    <div className="bg-dark-accent p-6 rounded-lg shadow-lg lg:col-span-2">
                         <h2 className="text-xl font-bold text-white mb-4 flex items-center"><FireIcon className="w-6 h-6 mr-3 text-primary"/>최근 식단 기록</h2>
                         <div className="space-y-6 max-h-96 overflow-y-auto">
                             {loading.diet ? <p>로딩 중...</p> : dietLogs.length > 0 ? dietLogs.map(log => (

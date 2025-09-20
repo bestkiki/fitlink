@@ -14,6 +14,8 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
     const [contact, setContact] = useState('');
     const [goal, setGoal] = useState('');
     const [notes, setNotes] = useState('');
+    const [totalSessions, setTotalSessions] = useState<number | ''>('');
+    const [usedSessions, setUsedSessions] = useState<number | ''>('');
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -23,12 +25,16 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
             setContact(member.contact || '');
             setGoal(member.goal || '');
             setNotes(member.notes || '');
+            setTotalSessions(member.totalSessions ?? '');
+            setUsedSessions(member.usedSessions ?? '');
         } else {
             // Reset form
             setName('');
             setContact('');
             setGoal('');
             setNotes('');
+            setTotalSessions('');
+            setUsedSessions('');
         }
         setError('');
         setIsSaving(false);
@@ -55,6 +61,8 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
                 contact,
                 goal,
                 notes,
+                totalSessions: totalSessions !== '' ? Number(totalSessions) : 0,
+                usedSessions: usedSessions !== '' ? Number(usedSessions) : 0,
             });
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
@@ -100,6 +108,30 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
                         className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="예: 010-1234-5678"
                     />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="total-sessions" className="block text-sm font-medium text-gray-300 mb-1">총 세션 횟수</label>
+                        <input
+                            type="number"
+                            id="total-sessions"
+                            value={totalSessions}
+                            onChange={(e) => setTotalSessions(e.target.value === '' ? '' : Number(e.target.value))}
+                            className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="예: 10"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="used-sessions" className="block text-sm font-medium text-gray-300 mb-1">사용한 세션 횟수</label>
+                        <input
+                            type="number"
+                            id="used-sessions"
+                            value={usedSessions}
+                            onChange={(e) => setUsedSessions(e.target.value === '' ? '' : Number(e.target.value))}
+                            className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="예: 3"
+                        />
+                    </div>
                 </div>
                  <div>
                     <label htmlFor="goal" className="block text-sm font-medium text-gray-300 mb-1">운동 목표</label>

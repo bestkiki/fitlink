@@ -25,6 +25,8 @@ export interface UserProfile {
   // Member specific
   goal?: string;
   trainerId?: string;
+  totalSessions?: number;
+  usedSessions?: number;
   // Trainer specific
   specialization?: string;
   career?: string;

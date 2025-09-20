@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from '../components/icons';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -42,14 +42,25 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [editingMealType, setEditingMealType] = useState<MealType | null>(null);
 
   useEffect(() => {
+      const unsubProfile = db.collection('users').doc(user.uid).onSnapshot(doc => {
+          if(doc.exists) {
+              setProfile(doc.data() as UserProfile);
+          }
+      });
+      return () => unsubProfile();
+  }, [user.uid]);
+
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(prev => ({ ...prev, main: true }));
       // Fetch trainer profile
-      if (userProfile.trainerId) {
-        const trainerDoc = await db.collection('users').doc(userProfile.trainerId).get();
+      if (profile.trainerId) {
+        const trainerDoc = await db.collection('users').doc(profile.trainerId).get();
         if (trainerDoc.exists) {
           setTrainerProfile(trainerDoc.data() as UserProfile);
         }
+      } else {
+        setTrainerProfile(null);
       }
 
       // Fetch body measurements
@@ -77,7 +88,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
     };
 
     fetchData();
-  }, [user.uid, userProfile.trainerId]);
+  }, [user.uid, profile.trainerId]);
 
   useEffect(() => {
     const userRef = db.collection('users').doc(user.uid);
@@ -242,6 +253,12 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       { key: 'dinner', name: '저녁' },
       { key: 'snacks', name: '간식' },
   ];
+  
+  const totalSessions = profile.totalSessions || 0;
+  const usedSessions = profile.usedSessions || 0;
+  const remainingSessions = totalSessions - usedSessions;
+  const progressPercentage = totalSessions > 0 ? (usedSessions / totalSessions) * 100 : 0;
+
 
   return (
     <>
@@ -307,6 +324,25 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                  )}
             </div>
         </div>
+
+        {/* New Session Status Card */}
+        {totalSessions > 0 && (
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg mb-8">
+                <h2 className="text-xl font-bold text-white flex items-center mb-4"><UsersIcon className="w-6 h-6 mr-3 text-secondary"/>PT 세션 현황</h2>
+                <div className="space-y-2">
+                    <div className="flex justify-between items-end mb-1">
+                        <span className="text-gray-400">진행률</span>
+                        <span className="font-bold text-white">
+                            <span className="text-3xl text-secondary">{remainingSessions}</span>
+                            <span className="text-gray-400"> / {totalSessions}회 남음</span>
+                        </span>
+                    </div>
+                    <div className="w-full bg-dark rounded-full h-2.5">
+                        <div className="bg-secondary h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                    </div>
+                </div>
+            </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="bg-dark-accent p-6 rounded-lg shadow-lg lg:col-span-2">

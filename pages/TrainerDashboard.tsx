@@ -252,7 +252,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 <tr className="border-b border-gray-700">
                                     <th className="p-3 text-sm font-semibold text-gray-400">이름</th>
                                     <th className="p-3 text-sm font-semibold text-gray-400 hidden md:table-cell">이메일</th>
-                                    <th className="p-3 text-sm font-semibold text-gray-400 hidden lg:table-cell">운동 목표</th>
+                                    <th className="p-3 text-sm font-semibold text-gray-400 hidden lg:table-cell">남은 세션</th>
                                     <th className="p-3 text-sm font-semibold text-gray-400 text-right">관리</th>
                                 </tr>
                             </thead>
@@ -260,18 +260,25 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 {loading ? (
                                     <tr><td colSpan={4} className="text-center p-4">회원 목록을 불러오는 중...</td></tr>
                                 ) : filteredMembers.length > 0 ? (
-                                    filteredMembers.map(member => (
-                                        <tr key={member.id} className="border-b border-gray-800 hover:bg-dark">
-                                            <td className="p-3 font-medium text-white">{member.name || '이름 미지정'}</td>
-                                            <td className="p-3 text-gray-400 hidden md:table-cell">{member.email}</td>
-                                            <td className="p-3 text-gray-400 hidden lg:table-cell truncate max-w-xs">{member.goal || '-'}</td>
-                                            <td className="p-3 text-right">
-                                                <button onClick={() => handleSelectMember(member)} className="text-primary hover:underline mr-4 text-sm font-semibold">기록 관리</button>
-                                                <button onClick={() => handleOpenAddEditModal(member)} className="text-gray-400 hover:text-white mr-2 p-1" title="프로필 수정"><PencilIcon className="w-5 h-5"/></button>
-                                                <button onClick={() => handleOpenDeleteModal(member)} className="text-gray-400 hover:text-red-400 p-1" title="회원 삭제"><TrashIcon className="w-5 h-5"/></button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                    filteredMembers.map(member => {
+                                        const totalSessions = member.totalSessions || 0;
+                                        const usedSessions = member.usedSessions || 0;
+                                        const remainingSessions = totalSessions - usedSessions;
+                                        return (
+                                            <tr key={member.id} className="border-b border-gray-800 hover:bg-dark">
+                                                <td className="p-3 font-medium text-white">{member.name || '이름 미지정'}</td>
+                                                <td className="p-3 text-gray-400 hidden md:table-cell">{member.email}</td>
+                                                <td className="p-3 text-gray-400 hidden lg:table-cell">
+                                                    {totalSessions > 0 ? `${remainingSessions} / ${totalSessions}회` : '-'}
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <button onClick={() => handleSelectMember(member)} className="text-primary hover:underline mr-4 text-sm font-semibold">기록 관리</button>
+                                                    <button onClick={() => handleOpenAddEditModal(member)} className="text-gray-400 hover:text-white mr-2 p-1" title="프로필 수정"><PencilIcon className="w-5 h-5"/></button>
+                                                    <button onClick={() => handleOpenDeleteModal(member)} className="text-gray-400 hover:text-red-400 p-1" title="회원 삭제"><TrashIcon className="w-5 h-5"/></button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
                                 ) : (
                                     <tr><td colSpan={4} className="text-center p-4 text-gray-500">담당 회원이 없습니다. '초대 및 공유' 버튼으로 회원을 초대해보세요.</td></tr>
                                 )}
