@@ -11,13 +11,14 @@ import MessageHistory from './MessageHistory';
 import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
 import AddDietLogModal from '../components/AddDietLogModal';
 import FindTrainersPage from './FindTrainersPage';
+import CommunityPage from './CommunityPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community';
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
@@ -267,6 +268,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       return <FindTrainersPage onBack={handleBackToDashboard} />;
   }
 
+  if (currentView === 'community') {
+      return <CommunityPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+  }
+
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const mealTypes: { key: MealType, name: string }[] = [
@@ -348,7 +353,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                         )}
                     </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
                      <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                         <CalendarIcon className="w-6 h-6 text-secondary" />
                         <span>수업 예약</span>
@@ -356,6 +361,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                      <button onClick={() => setCurrentView('messages')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                         <ChatBubbleIcon className="w-6 h-6 text-secondary" />
                         <span>메시지</span>
+                    </button>
+                    <button onClick={() => setCurrentView('community')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                        <ChatBubbleLeftRightIcon className="w-6 h-6 text-secondary" />
+                        <span>커뮤니티</span>
                     </button>
                      {trainerProfile && (
                          <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">

@@ -132,6 +132,18 @@ export interface Announcement {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface Post {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorProfileImageUrl?: string;
+  authorRole: 'trainer' | 'member';
+  content: string;
+  createdAt: firebase.firestore.Timestamp;
+  likes: string[]; // array of user uids
+  commentCount: number;
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);
