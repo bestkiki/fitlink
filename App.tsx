@@ -124,6 +124,14 @@ export interface ConsultationRequest {
     preferredTime?: string;
 }
 
+export interface Announcement {
+  id: string;
+  trainerId: string;
+  title: string;
+  content: string;
+  createdAt: firebase.firestore.Timestamp;
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);

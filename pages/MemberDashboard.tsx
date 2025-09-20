@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon } from '../components/icons';
+import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement } from '../App';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -26,10 +26,12 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
   const [personalExerciseLogs, setPersonalExerciseLogs] = useState<PersonalExerciseLog[]>([]);
   const [dietLog, setDietLog] = useState<DietLog | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState({
     main: true,
     personalLogs: true,
     dietLog: true,
+    announcements: true,
   });
   
   const [currentView, setCurrentView] = useState<MemberDashboardView>('dashboard');
@@ -78,6 +80,22 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
           const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExerciseLog));
           setExerciseLogs(data);
         });
+        
+      // Fetch Announcements
+      if (profile.trainerId) {
+          const announcementsUnsub = db.collection('users').doc(profile.trainerId).collection('announcements')
+              .orderBy('createdAt', 'desc')
+              .limit(5)
+              .onSnapshot(snapshot => {
+                  const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+                  setAnnouncements(data);
+                  setLoading(prev => ({ ...prev, announcements: false }));
+              });
+          return () => announcementsUnsub();
+      } else {
+          setLoading(prev => ({ ...prev, announcements: false }));
+      }
+
 
       setLoading(prev => ({...prev, main: false}));
 
@@ -270,8 +288,8 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
           환영합니다, <span className="font-semibold text-secondary">{profile.name || user.email}</span> 님!
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
                 <div className="flex items-center mb-4">
                     <UserCircleIcon className="w-10 h-10 text-secondary mr-4"/>
                     <h2 className="text-xl font-bold text-white">내 정보</h2>
@@ -285,7 +303,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                 </button>
             </div>
 
-            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
                 <div className="flex items-center mb-4">
                     <IdCardIcon className="w-10 h-10 text-secondary mr-4"/>
                     <h2 className="text-xl font-bold text-white">담당 트레이너</h2>
@@ -307,21 +325,41 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                 )}
             </div>
 
-            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col space-y-4">
-                 <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                    <CalendarIcon className="w-6 h-6 text-secondary" />
-                    <span>수업 예약하기</span>
-                </button>
-                 <button onClick={() => setCurrentView('messages')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                    <ChatBubbleIcon className="w-6 h-6 text-secondary" />
-                    <span>메시지 내역 보기</span>
-                </button>
-                 {trainerProfile && (
-                     <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                        <MagnifyingGlassIcon className="w-6 h-6 text-secondary" />
-                        <span>다른 트레이너 보기</span>
+            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col justify-between space-y-4 xl:col-span-2">
+                <div className="flex-grow">
+                     <h2 className="text-xl font-bold text-white flex items-center mb-4"><MegaphoneIcon className="w-6 h-6 mr-3 text-secondary"/>트레이너 공지사항</h2>
+                      <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                        {loading.announcements ? (
+                           <p className="text-gray-400">공지사항을 불러오는 중...</p>
+                        ) : announcements.length > 0 ? (
+                           announcements.map(ann => (
+                               <div key={ann.id} className="bg-dark p-3 rounded-md">
+                                   <p className="font-bold text-white">{ann.title}</p>
+                                   <p className="text-xs text-gray-500 mb-1">{ann.createdAt.toDate().toLocaleDateString('ko-KR')}</p>
+                                   <p className="text-sm text-gray-300 whitespace-pre-wrap">{ann.content}</p>
+                               </div>
+                           ))
+                        ) : (
+                           <p className="text-gray-500 text-center py-4">등록된 공지사항이 없습니다.</p>
+                        )}
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
+                     <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                        <CalendarIcon className="w-6 h-6 text-secondary" />
+                        <span>수업 예약</span>
                     </button>
-                 )}
+                     <button onClick={() => setCurrentView('messages')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                        <ChatBubbleIcon className="w-6 h-6 text-secondary" />
+                        <span>메시지</span>
+                    </button>
+                     {trainerProfile && (
+                         <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                            <MagnifyingGlassIcon className="w-6 h-6 text-secondary" />
+                            <span>다른 트레이너</span>
+                        </button>
+                     )}
+                </div>
             </div>
         </div>
 

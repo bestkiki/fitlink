@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
-import { UserProfile, ConsultationRequest } from '../App';
-// FIX: Imported TrashIcon to resolve reference error.
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon } from '../components/icons';
+import { UserProfile, ConsultationRequest, Announcement } from '../App';
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -12,6 +11,7 @@ import MemberDetailView from './MemberDetailView';
 import ScheduleManager from './ScheduleManager';
 import ShareProfileModal from '../components/InviteMemberModal';
 import ConsultationRequestsModal from '../components/ConsultationRequestsModal';
+import AddEditAnnouncementModal from '../components/AddEditAnnouncementModal';
 
 export interface Member extends UserProfile {
     id: string;
@@ -27,6 +27,7 @@ type TrainerView = 'dashboard' | 'memberDetail' | 'schedule';
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
     const [members, setMembers] = useState<Member[]>([]);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [consultationRequests, setConsultationRequests] = useState<ConsultationRequest[]>([]);
@@ -41,6 +42,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     const [deletingMember, setDeletingMember] = useState<Member | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
+    const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -49,7 +52,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             .onSnapshot(snapshot => {
                 const membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Member));
                 setMembers(membersData);
-                setLoading(false);
+                if (loading) setLoading(false);
             });
             
         const unsubscribeConsultations = db.collection('users').doc(user.uid).collection('consultationRequests')
@@ -58,10 +61,18 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 const requestsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ConsultationRequest));
                 setConsultationRequests(requestsData);
             });
+            
+        const unsubscribeAnnouncements = db.collection('users').doc(user.uid).collection('announcements')
+            .orderBy('createdAt', 'desc')
+            .onSnapshot(snapshot => {
+                const announcementData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+                setAnnouncements(announcementData);
+            });
 
         return () => {
             unsubscribeMembers();
             unsubscribeConsultations();
+            unsubscribeAnnouncements();
         };
     }, [user.uid]);
     
@@ -113,6 +124,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         if (!editingMember) return;
         try {
             await db.collection('users').doc(editingMember.id).update(memberData);
+            handleCloseAddEditModal();
         } catch (err: any) {
             console.error("Error saving member:", err);
             throw new Error('회원 정보 저장에 실패했습니다.');
@@ -138,6 +150,57 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             alert('회원 삭제에 실패했습니다.');
         }
     };
+    
+    const handleOpenAnnouncementModal = (announcement: Announcement | null) => {
+        setEditingAnnouncement(announcement);
+        setIsAnnouncementModalOpen(true);
+    };
+    
+    const handleSaveAnnouncement = async (data: { title: string, content: string }) => {
+        const collectionRef = db.collection('users').doc(user.uid).collection('announcements');
+        try {
+            if (editingAnnouncement) {
+                // Editing existing announcement
+                await collectionRef.doc(editingAnnouncement.id).update(data);
+            } else {
+                // Creating new announcement
+                await collectionRef.add({
+                    ...data,
+                    trainerId: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+                // Send notifications to all members
+                const batch = db.batch();
+                members.forEach(member => {
+                    const notifRef = db.collection('notifications').doc();
+                    batch.set(notifRef, {
+                        userId: member.id,
+                        message: `새로운 공지: ${data.title}`,
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                await batch.commit();
+            }
+            setIsAnnouncementModalOpen(false);
+            setEditingAnnouncement(null);
+        } catch (error) {
+            console.error("Error saving announcement: ", error);
+            throw new Error("공지 저장에 실패했습니다.");
+        }
+    };
+
+    const handleDeleteAnnouncement = async (announcementId: string) => {
+        if (window.confirm("정말로 이 공지를 삭제하시겠습니까?")) {
+            try {
+                await db.collection('users').doc(user.uid).collection('announcements').doc(announcementId).delete();
+            } catch (error) {
+                console.error("Error deleting announcement: ", error);
+                alert("공지 삭제에 실패했습니다.");
+            }
+        }
+    };
+
 
     const handleSelectMember = (member: Member) => {
         setSelectedMember(member);
@@ -176,8 +239,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!
                         </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
+                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
                                 <div className="flex items-center mb-4">
                                     {profile.profileImageUrl ? (
                                         <img src={profile.profileImageUrl} alt="Profile" className="w-16 h-16 rounded-full mr-4 object-cover"/>
@@ -205,18 +268,50 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 </div>
                             </div>
                             
-                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col justify-center space-y-4">
-                                <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                    <ShareIcon className="w-6 h-6 text-primary" />
-                                    <span>초대 및 공유</span>
-                                </button>
-                                <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                    <CalendarIcon className="w-6 h-6 text-primary" />
-                                    <span>스케줄 관리</span>
-                                </button>
+                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col justify-between space-y-4 xl:col-span-2">
+                               <div className="flex-grow">
+                                  <div className="flex justify-between items-center mb-4">
+                                      <h2 className="text-xl font-bold text-white flex items-center"><MegaphoneIcon className="w-6 h-6 mr-3 text-primary"/>공지사항 관리</h2>
+                                      <button onClick={() => handleOpenAnnouncementModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
+                                          <PlusCircleIcon className="w-5 h-5"/>
+                                          <span>새 공지 작성</span>
+                                      </button>
+                                  </div>
+                                  <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                                      {announcements.length > 0 ? (
+                                          announcements.map(ann => (
+                                              <div key={ann.id} className="bg-dark p-3 rounded-md">
+                                                  <div className="flex justify-between items-start">
+                                                      <div>
+                                                          <p className="font-bold text-white">{ann.title}</p>
+                                                          <p className="text-xs text-gray-500">{ann.createdAt.toDate().toLocaleDateString('ko-KR')}</p>
+                                                      </div>
+                                                      <div className="flex space-x-1 flex-shrink-0">
+                                                          <button onClick={() => handleOpenAnnouncementModal(ann)} className="p-1 hover:bg-primary/20 rounded-full"><PencilIcon className="w-4 h-4 text-primary"/></button>
+                                                          <button onClick={() => handleDeleteAnnouncement(ann.id)} className="p-1 hover:bg-red-500/20 rounded-full"><TrashIcon className="w-4 h-4 text-red-400"/></button>
+                                                      </div>
+                                                  </div>
+                                                  <p className="text-sm text-gray-400 mt-1 line-clamp-2">{ann.content}</p>
+                                              </div>
+                                          ))
+                                      ) : (
+                                          <p className="text-gray-500 text-center py-4">작성된 공지사항이 없습니다.</p>
+                                      )}
+                                  </div>
+                               </div>
+                               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
+                                  <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                      <ShareIcon className="w-6 h-6 text-primary" />
+                                      <span>초대 및 공유</span>
+                                  </button>
+                                  <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                      <CalendarIcon className="w-6 h-6 text-primary" />
+                                      <span>스케줄 관리</span>
+                                  </button>
+                               </div>
                             </div>
 
-                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col">
+                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
                                 <div className="flex items-center mb-4">
                                     <InboxArrowDownIcon className="w-10 h-10 text-primary mr-4"/>
                                     <h2 className="text-xl font-bold text-white">PT 상담 요청</h2>
@@ -294,6 +389,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         }
     };
 
+    if (currentView !== 'dashboard') {
+        return (
+            <>
+                {renderContent()}
+                {isAddEditMemberModalOpen && (
+                    <AddEditMemberModal
+                        isOpen={isAddEditMemberModalOpen}
+                        onClose={handleCloseAddEditModal}
+                        onSave={handleSaveMember}
+                        member={editingMember}
+                    />
+                )}
+            </>
+        );
+    }
+    
     return (
         <>
             {renderContent()}
@@ -326,6 +437,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 isOpen={isConsultationModalOpen}
                 onClose={() => setIsConsultationModalOpen(false)}
                 trainerId={user.uid}
+            />
+            <AddEditAnnouncementModal
+                isOpen={isAnnouncementModalOpen}
+                onClose={() => { setIsAnnouncementModalOpen(false); setEditingAnnouncement(null); }}
+                onSave={handleSaveAnnouncement}
+                announcement={editingAnnouncement}
             />
         </>
     );
