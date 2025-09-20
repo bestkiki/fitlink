@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { UserProfile } from '../App';
-import { ArrowLeftIcon, DumbbellIcon, MagnifyingGlassIcon, UserCircleIcon } from '../components/icons';
+import { ArrowLeftIcon, DumbbellIcon, MagnifyingGlassIcon, UserCircleIcon, MapPinIcon } from '../components/icons';
 
 interface FindTrainersPageProps {
     onBack: () => void;
@@ -14,15 +14,26 @@ interface TrainerProfile extends UserProfile {
 const TrainerCard: React.FC<{ trainer: TrainerProfile }> = ({ trainer }) => (
     <a href={`/coach/${trainer.id}`} className="block bg-dark-accent p-6 rounded-lg shadow-lg hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-1 group">
         <div className="flex items-center space-x-4 mb-4">
-            <UserCircleIcon className="w-16 h-16 text-gray-500 group-hover:text-primary transition-colors"/>
+            {trainer.profileImageUrl ? (
+                <img src={trainer.profileImageUrl} alt={trainer.name} className="w-16 h-16 rounded-full object-cover border-2 border-dark" />
+            ) : (
+                <UserCircleIcon className="w-16 h-16 text-gray-500 group-hover:text-primary transition-colors"/>
+            )}
             <div>
                 <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">{trainer.name || '이름 미지정'}</h3>
                 <p className="text-sm text-gray-400">{trainer.email}</p>
             </div>
         </div>
-        <div>
-            <h4 className="font-semibold text-gray-300 flex items-center text-sm mb-2"><DumbbellIcon className="w-4 h-4 mr-2 text-primary"/>전문 분야</h4>
-            <p className="text-gray-400 text-sm line-clamp-2">{trainer.specialization || '전문 분야가 아직 등록되지 않았습니다.'}</p>
+        <div className="space-y-4 pt-4 border-t border-gray-700/50">
+            <div>
+                <h4 className="font-semibold text-gray-300 flex items-center text-sm mb-1"><MapPinIcon className="w-4 h-4 mr-2 text-primary"/>근무지</h4>
+                <p className="text-gray-400 text-sm line-clamp-1">{trainer.gymName || '지점 정보 없음'}</p>
+                {trainer.gymAddress && <p className="text-gray-500 text-xs line-clamp-1">{trainer.gymAddress}</p>}
+            </div>
+            <div>
+                <h4 className="font-semibold text-gray-300 flex items-center text-sm mb-1"><DumbbellIcon className="w-4 h-4 mr-2 text-primary"/>전문 분야</h4>
+                <p className="text-gray-400 text-sm line-clamp-2">{trainer.specialization || '전문 분야가 아직 등록되지 않았습니다.'}</p>
+            </div>
         </div>
     </a>
 );
@@ -59,7 +70,9 @@ const FindTrainersPage: React.FC<FindTrainersPageProps> = ({ onBack }) => {
         const lowercasedTerm = searchTerm.toLowerCase();
         return trainers.filter(trainer => 
             trainer.name?.toLowerCase().includes(lowercasedTerm) ||
-            trainer.specialization?.toLowerCase().includes(lowercasedTerm)
+            trainer.specialization?.toLowerCase().includes(lowercasedTerm) ||
+            trainer.gymName?.toLowerCase().includes(lowercasedTerm) ||
+            trainer.gymAddress?.toLowerCase().includes(lowercasedTerm)
         );
     }, [searchTerm, trainers]);
 
@@ -75,7 +88,7 @@ const FindTrainersPage: React.FC<FindTrainersPageProps> = ({ onBack }) => {
             <div className="relative mb-8 max-w-lg">
                 <input
                     type="text"
-                    placeholder="이름 또는 전문 분야로 검색..."
+                    placeholder="이름, 전문 분야, 지역으로 검색..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full bg-dark-accent p-3 pl-10 rounded-lg text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary"

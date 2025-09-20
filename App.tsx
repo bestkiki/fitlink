@@ -29,6 +29,8 @@ export interface UserProfile {
   specialization?: string;
   career?: string;
   notes?: string; // Trainer's private notes about a member
+  gymName?: string;
+  gymAddress?: string;
 }
 
 export interface ExerciseSet {

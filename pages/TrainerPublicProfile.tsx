@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon, CameraIcon } from '../components/icons';
+import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon, CameraIcon, MapPinIcon } from '../components/icons';
 import ConsultationRequestModal from '../components/ConsultationRequestModal';
 
 interface TrainerPublicProfileProps {
@@ -146,6 +146,14 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                         </div>
                         
                         <div className="space-y-6">
+                            {(trainerProfile.gymName || trainerProfile.gymAddress) && (
+                                <div className="bg-dark p-4 rounded-lg">
+                                    <h3 className="font-bold text-primary flex items-center mb-2"><MapPinIcon className="w-5 h-5 mr-2"/>근무 지점</h3>
+                                    {trainerProfile.gymName && <p className="text-gray-200 font-semibold">{trainerProfile.gymName}</p>}
+                                    {trainerProfile.gymAddress && <p className="text-gray-400 text-sm mt-1">{trainerProfile.gymAddress}</p>}
+                                </div>
+                            )}
+
                             {trainerProfile.specialization && (
                                 <div className="bg-dark p-4 rounded-lg">
                                     <h3 className="font-bold text-primary flex items-center mb-2"><DumbbellIcon className="w-5 h-5 mr-2"/>전문 분야</h3>

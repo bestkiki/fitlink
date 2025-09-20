@@ -15,6 +15,8 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
     const [contact, setContact] = useState('');
     const [specialization, setSpecialization] = useState('');
     const [career, setCareer] = useState('');
+    const [gymName, setGymName] = useState('');
+    const [gymAddress, setGymAddress] = useState('');
     
     const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -30,6 +32,8 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
             setContact(userProfile.contact || '');
             setSpecialization(userProfile.specialization || '');
             setCareer(userProfile.career || '');
+            setGymName(userProfile.gymName || '');
+            setGymAddress(userProfile.gymAddress || '');
             setProfileImagePreview(userProfile.profileImageUrl || null);
             setPromoImagePreview(userProfile.promoImageUrl || null);
         }
@@ -69,6 +73,8 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
                 contact,
                 specialization,
                 career,
+                gymName,
+                gymAddress,
             }, profileImageFile, promoImageFile);
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
@@ -121,6 +127,31 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
                                 placeholder="예: 010-1234-5678"
                             />
                         </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="trainer-gym-name" className="block text-sm font-medium text-gray-300 mb-1">지점명</label>
+                        <input
+                            type="text"
+                            id="trainer-gym-name"
+                            value={gymName}
+                            onChange={(e) => setGymName(e.target.value)}
+                            className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="예: FitLink 강남점"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="trainer-gym-address" className="block text-sm font-medium text-gray-300 mb-1">지점 위치</label>
+                        <input
+                            type="text"
+                            id="trainer-gym-address"
+                            value={gymAddress}
+                            onChange={(e) => setGymAddress(e.target.value)}
+                            className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="예: 서울특별시 강남구"
+                        />
                     </div>
                 </div>
 

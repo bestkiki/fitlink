@@ -185,6 +185,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                         </div>
                         <div className="flex-grow">
                             <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
+                            <p className="text-gray-400"><strong>지점명:</strong> {profile.gymName || '미지정'}</p>
                             <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
                             <p className="text-gray-400"><strong>연락처:</strong> {profile.contact || '미지정'}</p>
                         </div>

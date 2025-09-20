@@ -1,5 +1,5 @@
 {
-  "name": "fitlink6---트레이너-이미지-업로드-기능",
+  "name": "fitlink7---트레이너-트레이너-운동하는-지점명과-지점-위치도-추가",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
