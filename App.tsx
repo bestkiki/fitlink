@@ -27,6 +27,7 @@ export interface UserProfile {
   trainerId?: string;
   totalSessions?: number;
   usedSessions?: number;
+  joinedChallenges?: string[]; // Array of challenge IDs
   // Trainer specific
   specialization?: string;
   career?: string;

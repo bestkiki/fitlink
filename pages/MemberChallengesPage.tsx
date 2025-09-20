@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile, Challenge, ChallengeParticipant } from '../App';
@@ -98,32 +98,17 @@ interface MemberChallengesPageProps {
 
 const MemberChallengesPage: React.FC<MemberChallengesPageProps> = ({ user, userProfile, onBack }) => {
     const [challenges, setChallenges] = useState<Challenge[]>([]);
-    const [myParticipationIds, setMyParticipationIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
-    const fetchMyParticipations = useCallback(async () => {
-        const participationsSnapshot = await db.collectionGroup('participants')
-            .where('__name__', '>=', `challenges/ /participants/${user.uid}`)
-            .where('__name__', '<=', `challenges/~/participants/${user.uid}`)
-            .get();
-
-        const participationSet = new Set<string>();
-        participationsSnapshot.forEach(doc => {
-            const challengeId = doc.ref.parent.parent?.id;
-            if (challengeId) {
-                participationSet.add(challengeId);
-            }
-        });
-        setMyParticipationIds(participationSet);
-    }, [user.uid]);
+    // Get participation info directly from user profile for simplicity and performance
+    const myParticipationIds = new Set(userProfile.joinedChallenges || []);
 
     useEffect(() => {
         setLoading(true);
-        const unsubscribe = db.collection('challenges').orderBy('createdAt', 'desc').onSnapshot(async (snapshot) => {
+        const unsubscribe = db.collection('challenges').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
             setChallenges(data);
-            await fetchMyParticipations();
             setLoading(false);
         }, error => {
             console.error("Error fetching challenges:", error);
@@ -131,11 +116,12 @@ const MemberChallengesPage: React.FC<MemberChallengesPageProps> = ({ user, userP
         });
 
         return () => unsubscribe();
-    }, [fetchMyParticipations]);
+    }, []);
     
     const handleJoinChallenge = async (challengeId: string) => {
         const challengeRef = db.collection('challenges').doc(challengeId);
         const participantRef = challengeRef.collection('participants').doc(user.uid);
+        const userRef = db.collection('users').doc(user.uid);
 
         try {
             await db.runTransaction(async (transaction) => {
@@ -143,17 +129,23 @@ const MemberChallengesPage: React.FC<MemberChallengesPageProps> = ({ user, userP
                 if (participantDoc.exists) {
                     throw new Error("이미 참여 중인 챌린지입니다.");
                 }
+                // Add to participants subcollection
                 transaction.set(participantRef, {
                     userName: userProfile.name || user.email,
                     userProfileImageUrl: userProfile.profileImageUrl || null,
                     progress: 0,
                     joinedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                // Increment participant count on challenge
                 transaction.update(challengeRef, {
                     participantCount: firebase.firestore.FieldValue.increment(1)
                 });
+                // Add challenge ID to user's profile
+                transaction.update(userRef, {
+                    joinedChallenges: firebase.firestore.FieldValue.arrayUnion(challengeId)
+                });
             });
-            setMyParticipationIds(prev => new Set(prev).add(challengeId));
+            // No need for state update, userProfile snapshot will trigger re-render
         } catch (error) {
             console.error("Error joining challenge:", error);
             alert((error as Error).message || "챌린지 참여에 실패했습니다.");
@@ -165,6 +157,7 @@ const MemberChallengesPage: React.FC<MemberChallengesPageProps> = ({ user, userP
 
         const challengeRef = db.collection('challenges').doc(challengeId);
         const participantRef = challengeRef.collection('participants').doc(user.uid);
+        const userRef = db.collection('users').doc(user.uid);
 
         try {
             await db.runTransaction(async (transaction) => {
@@ -172,11 +165,10 @@ const MemberChallengesPage: React.FC<MemberChallengesPageProps> = ({ user, userP
                 transaction.update(challengeRef, {
                     participantCount: firebase.firestore.FieldValue.increment(-1)
                 });
-            });
-            setMyParticipationIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(challengeId);
-                return newSet;
+                 // Remove challenge ID from user's profile
+                transaction.update(userRef, {
+                    joinedChallenges: firebase.firestore.FieldValue.arrayRemove(challengeId)
+                });
             });
             setSelectedChallenge(null); // Go back to list view
         } catch (error) {
