@@ -203,3 +203,10 @@ export const HeartIcon: React.FC<IconProps> = (props) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
   </svg>
 );
+
+export const TrophyIcon: React.FC<IconProps> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l1.5-1.5 M19.5 19.5l-1.5-1.5M5.25 7.5l-1.5 1.5M18.75 7.5l1.5 1.5m-16.5 6l1.5 1.5m13.5-1.5l-1.5 1.5M12 21v-3.375c0-.621.504-1.125 1.125-1.125h.75c.621 0 1.125.504 1.125 1.125V21M12 3.75v3.375c0 .621-.504 1.125-1.125 1.125h-.75c-.621 0-1.125-.504-1.125-1.125V3.75m1.5-1.5h.008v.008H12V2.25zm0 18h.008v.008H12v-.008zm-3.375-3.375h.008v.008h-.008v-.008zm6.75 0h.008v.008h-.008v-.008zm-6.75-11.25h.008v.008h-.008V6.375zm6.75 0h.008v.008h-.008V6.375zM12 14.25a3 3 0 100-6 3 3 0 000 6z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 110-18 9 9 0 010 18z" />
+  </svg>
+);

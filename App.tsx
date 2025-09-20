@@ -155,6 +155,25 @@ export interface Post {
   comments?: Comment[]; // Loaded on-demand
 }
 
+export interface Challenge {
+  id: string;
+  trainerId: string;
+  title: string;
+  description: string;
+  startDate: firebase.firestore.Timestamp;
+  endDate: firebase.firestore.Timestamp;
+  createdAt: firebase.firestore.Timestamp;
+  participantCount: number;
+}
+
+export interface ChallengeParticipant {
+    id: string; // This will be the user's UID
+    userName: string;
+    userProfileImageUrl?: string;
+    progress: number; // e.g., number of workouts completed
+    joinedAt: firebase.firestore.Timestamp;
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);

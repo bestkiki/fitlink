@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
 import { UserProfile, ConsultationRequest, Announcement } from '../App';
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon } from '../components/icons';
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -13,6 +13,7 @@ import ShareProfileModal from '../components/InviteMemberModal';
 import ConsultationRequestsModal from '../components/ConsultationRequestsModal';
 import AddEditAnnouncementModal from '../components/AddEditAnnouncementModal';
 import CommunityPage from './CommunityPage';
+import ChallengeManagerPage from './ChallengeManagerPage';
 
 export interface Member extends UserProfile {
     id: string;
@@ -23,7 +24,7 @@ interface TrainerDashboardProps {
   userProfile: UserProfile;
 }
 
-type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community';
+type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges';
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
@@ -235,6 +236,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 return <ScheduleManager user={user} onBack={handleBackToDashboard} />;
             case 'community':
                 return <CommunityPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+            case 'challenges':
+                return <ChallengeManagerPage user={user} onBack={handleBackToDashboard} />;
             default:
                 return (
                     <div className="container mx-auto px-6 py-12">
@@ -303,18 +306,22 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                       )}
                                   </div>
                                </div>
-                               <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-700">
+                               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
                                   <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                       <ShareIcon className="w-6 h-6 text-primary" />
-                                      <span>초대 및 공유</span>
+                                      <span>초대/공유</span>
                                   </button>
                                   <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                       <CalendarIcon className="w-6 h-6 text-primary" />
-                                      <span>스케줄 관리</span>
+                                      <span>스케줄</span>
                                   </button>
                                    <button onClick={() => setCurrentView('community')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                       <ChatBubbleLeftRightIcon className="w-6 h-6 text-primary" />
                                       <span>커뮤니티</span>
+                                  </button>
+                                  <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                      <TrophyIcon className="w-6 h-6 text-primary" />
+                                      <span>챌린지</span>
                                   </button>
                                </div>
                             </div>
