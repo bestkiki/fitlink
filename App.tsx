@@ -175,6 +175,25 @@ export interface ChallengeParticipant {
     joinedAt: firebase.firestore.Timestamp;
 }
 
+export interface Answer {
+    id: string;
+    content: string;
+    authorId: string;
+    authorName: string;
+    authorProfileImageUrl?: string;
+    createdAt: firebase.firestore.Timestamp;
+}
+
+export interface Question {
+    id: string;
+    title: string;
+    content: string;
+    authorId: string;
+    authorName: string;
+    createdAt: firebase.firestore.Timestamp;
+    answerCount: number;
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);

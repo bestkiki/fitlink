@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
 import { UserProfile, ConsultationRequest, Announcement } from '../App';
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon } from '../components/icons';
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon, QuestionMarkCircleIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -14,6 +14,7 @@ import ConsultationRequestsModal from '../components/ConsultationRequestsModal';
 import AddEditAnnouncementModal from '../components/AddEditAnnouncementModal';
 import CommunityPage from './CommunityPage';
 import ChallengeManagerPage from './ChallengeManagerPage';
+import QnAPage from './QnAPage';
 
 export interface Member extends UserProfile {
     id: string;
@@ -24,7 +25,7 @@ interface TrainerDashboardProps {
   userProfile: UserProfile;
 }
 
-type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges';
+type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges' | 'qna';
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
@@ -238,6 +239,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 return <CommunityPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
             case 'challenges':
                 return <ChallengeManagerPage user={user} onBack={handleBackToDashboard} />;
+            case 'qna':
+                return <QnAPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
             default:
                 return (
                     <div className="container mx-auto px-6 py-12">
@@ -306,7 +309,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                       )}
                                   </div>
                                </div>
-                               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+                               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-700">
                                   <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                       <ShareIcon className="w-6 h-6 text-primary" />
                                       <span>초대/공유</span>
@@ -322,6 +325,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                   <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                       <TrophyIcon className="w-6 h-6 text-primary" />
                                       <span>챌린지</span>
+                                  </button>
+                                  <button onClick={() => setCurrentView('qna')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                      <QuestionMarkCircleIcon className="w-6 h-6 text-primary" />
+                                      <span>Q&A</span>
                                   </button>
                                </div>
                             </div>

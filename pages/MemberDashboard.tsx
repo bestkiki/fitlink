@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon } from '../components/icons';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon, QuestionMarkCircleIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -13,13 +13,14 @@ import AddDietLogModal from '../components/AddDietLogModal';
 import FindTrainersPage from './FindTrainersPage';
 import CommunityPage from './CommunityPage';
 import MemberChallengesPage from './MemberChallengesPage';
+import QnAPage from './QnAPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna';
 
 // FIX: Encapsulated all logic within the component function to resolve scope-related errors.
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
@@ -278,6 +279,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       return <MemberChallengesPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
   }
 
+  if (currentView === 'qna') {
+    return <QnAPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+  }
+
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const mealTypes: { key: MealType, name: string }[] = [
@@ -362,7 +367,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
         {/* Navigation Buttons Section */}
         <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                  <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                     <CalendarIcon className="w-6 h-6 text-secondary" />
                     <span>수업 예약</span>
@@ -378,6 +383,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                 <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                     <TrophyIcon className="w-6 h-6 text-secondary" />
                     <span>챌린지</span>
+                </button>
+                <button onClick={() => setCurrentView('qna')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                    <QuestionMarkCircleIcon className="w-6 h-6 text-secondary" />
+                    <span>Q&A</span>
                 </button>
                  {trainerProfile ? (
                      <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
