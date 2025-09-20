@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { Member } from '../pages/TrainerDashboard';
+import { UserProfile } from '../App';
 
 interface AddEditMemberModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (memberData: Omit<Member, 'id' | 'email'>) => Promise<void>;
+    onSave: (memberData: Partial<UserProfile>) => Promise<void>;
     member: Member | null;
 }
 
@@ -45,25 +46,20 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
             setError('이름은 필수 항목입니다.');
             return;
         }
-        if (!member) return;
-
+        
         setIsSaving(true);
-        setError(''); // Clear previous errors
+        setError('');
 
         try {
-            // FIX: The onSave handler expects a complete object matching Omit<Member, 'id' | 'email'>.
-            // Spreading the existing member object and overwriting with new values ensures all
-            // required properties are present and unchanged properties are preserved.
-            const { id, email, ...restOfMember } = member;
-            await onSave({
-                ...restOfMember,
+            const memberDataToSave: Partial<UserProfile> = {
                 name,
                 contact,
                 goal,
                 notes,
                 totalSessions: totalSessions !== '' ? Number(totalSessions) : 0,
                 usedSessions: usedSessions !== '' ? Number(usedSessions) : 0,
-            });
+            };
+            await onSave(memberDataToSave);
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
         } finally {

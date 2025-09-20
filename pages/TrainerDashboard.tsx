@@ -103,13 +103,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         setEditingMember(member);
         setIsAddEditMemberModalOpen(true);
     };
+    
+    const handleCloseAddEditModal = () => {
+        setIsAddEditMemberModalOpen(false);
+        setEditingMember(null);
+    };
 
-    const handleSaveMember = async (memberData: Omit<Member, 'id' | 'email'>) => {
+    const handleSaveMember = async (memberData: Partial<UserProfile>) => {
         if (!editingMember) return;
         try {
             await db.collection('users').doc(editingMember.id).update(memberData);
-            setIsAddEditMemberModalOpen(false);
-            setEditingMember(null);
+            handleCloseAddEditModal();
         } catch (err: any) {
             console.error("Error saving member:", err);
             throw new Error('회원 정보 저장에 실패했습니다.');
@@ -296,7 +300,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             />
             <AddEditMemberModal
                 isOpen={isAddEditMemberModalOpen}
-                onClose={() => setIsAddEditMemberModalOpen(false)}
+                onClose={handleCloseAddEditModal}
                 onSave={handleSaveMember}
                 member={editingMember}
             />
