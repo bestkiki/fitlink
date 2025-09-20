@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon } from '../components/icons';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -12,13 +12,14 @@ import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
 import AddDietLogModal from '../components/AddDietLogModal';
 import FindTrainersPage from './FindTrainersPage';
 import CommunityPage from './CommunityPage';
+import MemberChallengesPage from './MemberChallengesPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges';
 
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
@@ -156,7 +157,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       await db.collection('users').doc(user.uid).update(profileData);
       setProfile(prevProfile => ({ ...prevProfile, ...profileData }));
       setIsProfileModalOpen(false);
-    } catch (err: any) {
+    } catch (err: any) => {
       console.error("Error updating profile:", err);
       throw new Error('프로필 저장에 실패했습니다. 다시 시도해주세요.');
     }
@@ -272,6 +273,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       return <CommunityPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
   }
 
+  if (currentView === 'challenges') {
+      return <MemberChallengesPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+  }
+
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const mealTypes: { key: MealType, name: string }[] = [
@@ -353,7 +358,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                         )}
                     </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-700">
                      <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                         <CalendarIcon className="w-6 h-6 text-secondary" />
                         <span>수업 예약</span>
@@ -365,6 +370,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                     <button onClick={() => setCurrentView('community')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                         <ChatBubbleLeftRightIcon className="w-6 h-6 text-secondary" />
                         <span>커뮤니티</span>
+                    </button>
+                    <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                        <TrophyIcon className="w-6 h-6 text-secondary" />
+                        <span>챌린지</span>
                     </button>
                      {trainerProfile && (
                          <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
