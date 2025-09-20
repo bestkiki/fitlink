@@ -21,6 +21,7 @@ interface MemberDashboardProps {
 
 type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges';
 
+// FIX: Encapsulated all logic within the component function to resolve scope-related errors.
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
   const [profile, setProfile] = useState(userProfile);
   const [trainerProfile, setTrainerProfile] = useState<UserProfile | null>(null);
@@ -157,7 +158,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       await db.collection('users').doc(user.uid).update(profileData);
       setProfile(prevProfile => ({ ...prevProfile, ...profileData }));
       setIsProfileModalOpen(false);
-    } catch (err: any) => {
+    } catch (err: any) {
       console.error("Error updating profile:", err);
       throw new Error('프로필 저장에 실패했습니다. 다시 시도해주세요.');
     }
