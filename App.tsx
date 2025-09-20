@@ -132,6 +132,16 @@ export interface Announcement {
   createdAt: firebase.firestore.Timestamp;
 }
 
+export interface Comment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorProfileImageUrl?: string;
+  authorRole: 'trainer' | 'member';
+  content: string;
+  createdAt: firebase.firestore.Timestamp;
+}
+
 export interface Post {
   id: string;
   authorId: string;
@@ -142,6 +152,7 @@ export interface Post {
   createdAt: firebase.firestore.Timestamp;
   likes: string[]; // array of user uids
   commentCount: number;
+  comments?: Comment[]; // Loaded on-demand
 }
 
 
