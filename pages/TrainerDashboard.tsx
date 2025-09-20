@@ -249,7 +249,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!
                         </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8">
                             <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
                                 <div className="flex items-center mb-4">
                                     {profile.profileImageUrl ? (
@@ -278,8 +278,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 </div>
                             </div>
                             
-                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col justify-between space-y-4 xl:col-span-2">
-                               <div className="flex-grow">
+                            <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-2">
                                   <div className="flex justify-between items-center mb-4">
                                       <h2 className="text-xl font-bold text-white flex items-center"><MegaphoneIcon className="w-6 h-6 mr-3 text-primary"/>공지사항 관리</h2>
                                       <button onClick={() => handleOpenAnnouncementModal(null)} className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-1 px-3 rounded-lg transition-colors text-sm">
@@ -287,7 +286,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                           <span>새 공지 작성</span>
                                       </button>
                                   </div>
-                                  <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                                  <div className="flex-grow space-y-3 max-h-60 overflow-y-auto pr-2">
                                       {announcements.length > 0 ? (
                                           announcements.map(ann => (
                                               <div key={ann.id} className="bg-dark p-3 rounded-md">
@@ -305,32 +304,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                               </div>
                                           ))
                                       ) : (
-                                          <p className="text-gray-500 text-center py-4">작성된 공지사항이 없습니다.</p>
+                                        <div className="flex items-center justify-center h-full min-h-[10rem]">
+                                          <p className="text-gray-500 text-center">작성된 공지사항이 없습니다.</p>
+                                        </div>
                                       )}
                                   </div>
-                               </div>
-                               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-700">
-                                  <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                      <ShareIcon className="w-6 h-6 text-primary" />
-                                      <span>초대/공유</span>
-                                  </button>
-                                  <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                      <CalendarIcon className="w-6 h-6 text-primary" />
-                                      <span>스케줄</span>
-                                  </button>
-                                   <button onClick={() => setCurrentView('community')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                      <ChatBubbleLeftRightIcon className="w-6 h-6 text-primary" />
-                                      <span>커뮤니티</span>
-                                  </button>
-                                  <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                      <TrophyIcon className="w-6 h-6 text-primary" />
-                                      <span>챌린지</span>
-                                  </button>
-                                  <button onClick={() => setCurrentView('qna')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                                      <QuestionMarkCircleIcon className="w-6 h-6 text-primary" />
-                                      <span>Q&A</span>
-                                  </button>
-                               </div>
                             </div>
 
                             <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
@@ -350,6 +328,31 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 </div>
                                 <button onClick={() => setIsConsultationModalOpen(true)} className="mt-4 bg-dark hover:bg-dark/70 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors w-full border border-gray-600">
                                     상담 내역 관리
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                                <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <ShareIcon className="w-6 h-6 text-primary" />
+                                    <span>초대/공유</span>
+                                </button>
+                                <button onClick={() => setCurrentView('schedule')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <CalendarIcon className="w-6 h-6 text-primary" />
+                                    <span>스케줄</span>
+                                </button>
+                                 <button onClick={() => setCurrentView('community')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <ChatBubbleLeftRightIcon className="w-6 h-6 text-primary" />
+                                    <span>커뮤니티</span>
+                                </button>
+                                <button onClick={() => setCurrentView('challenges')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <TrophyIcon className="w-6 h-6 text-primary" />
+                                    <span>챌린지</span>
+                                </button>
+                                <button onClick={() => setCurrentView('qna')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <QuestionMarkCircleIcon className="w-6 h-6 text-primary" />
+                                    <span>Q&A</span>
                                 </button>
                             </div>
                         </div>
