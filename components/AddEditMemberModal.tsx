@@ -42,6 +42,7 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
     }, [member, isOpen]);
 
     const handleSave = async () => {
+        if (!member) return;
         if (!name.trim()) {
             setError('이름은 필수 항목입니다.');
             return;
@@ -51,15 +52,25 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
         setError('');
 
         try {
-            const memberDataToSave: Partial<UserProfile> = {
-                name,
-                contact,
-                goal,
-                notes,
-                totalSessions: totalSessions !== '' ? Number(totalSessions) : 0,
-                usedSessions: usedSessions !== '' ? Number(usedSessions) : 0,
-            };
-            await onSave(memberDataToSave);
+            const dataToUpdate: Partial<UserProfile> = {};
+            
+            if (name !== (member.name || '')) dataToUpdate.name = name;
+            if (contact !== (member.contact || '')) dataToUpdate.contact = contact;
+            if (goal !== (member.goal || '')) dataToUpdate.goal = goal;
+            if (notes !== (member.notes || '')) dataToUpdate.notes = notes;
+            
+            const newTotalSessions = totalSessions !== '' ? Number(totalSessions) : 0;
+            if (newTotalSessions !== (member.totalSessions ?? 0)) dataToUpdate.totalSessions = newTotalSessions;
+
+            const newUsedSessions = usedSessions !== '' ? Number(usedSessions) : 0;
+            if (newUsedSessions !== (member.usedSessions ?? 0)) dataToUpdate.usedSessions = newUsedSessions;
+
+            if (Object.keys(dataToUpdate).length > 0) {
+                 await onSave(dataToUpdate);
+            }
+            
+            onClose(); // Close modal on successful save or if there are no changes
+           
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
         } finally {
@@ -115,6 +126,7 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
                             onChange={(e) => setTotalSessions(e.target.value === '' ? '' : Number(e.target.value))}
                             className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="예: 10"
+                            min="0"
                         />
                     </div>
                     <div>
@@ -126,6 +138,7 @@ const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ isOpen, onClose
                             onChange={(e) => setUsedSessions(e.target.value === '' ? '' : Number(e.target.value))}
                             className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                             placeholder="예: 3"
+                            min="0"
                         />
                     </div>
                 </div>

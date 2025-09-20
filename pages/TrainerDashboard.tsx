@@ -113,7 +113,6 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         if (!editingMember) return;
         try {
             await db.collection('users').doc(editingMember.id).update(memberData);
-            handleCloseAddEditModal();
         } catch (err: any) {
             console.error("Error saving member:", err);
             throw new Error('회원 정보 저장에 실패했습니다.');
