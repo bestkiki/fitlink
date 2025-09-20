@@ -124,10 +124,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         if (!editingMember) return;
         try {
             await db.collection('users').doc(editingMember.id).update(memberData);
-            handleCloseAddEditModal();
         } catch (err: any) {
             console.error("Error saving member:", err);
             throw new Error('회원 정보 저장에 실패했습니다.');
+        } finally {
+            handleCloseAddEditModal();
         }
     };
     
@@ -284,7 +285,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                                   <div className="flex justify-between items-start">
                                                       <div>
                                                           <p className="font-bold text-white">{ann.title}</p>
-                                                          <p className="text-xs text-gray-500">{ann.createdAt.toDate().toLocaleDateString('ko-KR')}</p>
+                                                          <p className="text-xs text-gray-500">{ann.createdAt ? ann.createdAt.toDate().toLocaleDateString('ko-KR') : '방금 전'}</p>
                                                       </div>
                                                       <div className="flex space-x-1 flex-shrink-0">
                                                           <button onClick={() => handleOpenAnnouncementModal(ann)} className="p-1 hover:bg-primary/20 rounded-full"><PencilIcon className="w-4 h-4 text-primary"/></button>
@@ -388,63 +389,64 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 );
         }
     };
-
-    if (currentView !== 'dashboard') {
-        return (
-            <>
-                {renderContent()}
-                {isAddEditMemberModalOpen && (
-                    <AddEditMemberModal
-                        isOpen={isAddEditMemberModalOpen}
-                        onClose={handleCloseAddEditModal}
-                        onSave={handleSaveMember}
-                        member={editingMember}
-                    />
-                )}
-            </>
-        );
-    }
     
     return (
-        <>
-            {renderContent()}
-
-            <EditTrainerProfileModal 
-                isOpen={isProfileModalOpen}
-                onClose={() => setIsProfileModalOpen(false)}
-                onSave={handleSaveProfile}
-                userProfile={profile}
-            />
-            <AddEditMemberModal
-                isOpen={isAddEditMemberModalOpen}
-                onClose={handleCloseAddEditModal}
-                onSave={handleSaveMember}
-                member={editingMember}
-            />
-            <DeleteConfirmationModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={handleDeleteMember}
-                isDeleting={false}
-                memberName={deletingMember?.name || ''}
-            />
-            <ShareProfileModal
-                isOpen={isShareModalOpen}
-                onClose={() => setIsShareModalOpen(false)}
-                trainerId={user.uid}
-            />
-            <ConsultationRequestsModal
-                isOpen={isConsultationModalOpen}
-                onClose={() => setIsConsultationModalOpen(false)}
-                trainerId={user.uid}
-            />
-            <AddEditAnnouncementModal
-                isOpen={isAnnouncementModalOpen}
-                onClose={() => { setIsAnnouncementModalOpen(false); setEditingAnnouncement(null); }}
-                onSave={handleSaveAnnouncement}
-                announcement={editingAnnouncement}
-            />
-        </>
+        <div className="min-h-screen bg-dark">
+            {currentView === 'dashboard' ? (
+                 <>
+                    {renderContent()}
+                    <EditTrainerProfileModal 
+                        isOpen={isProfileModalOpen}
+                        onClose={() => setIsProfileModalOpen(false)}
+                        onSave={handleSaveProfile}
+                        userProfile={profile}
+                    />
+                    {isAddEditMemberModalOpen && (
+                        <AddEditMemberModal
+                            isOpen={isAddEditMemberModalOpen}
+                            onClose={handleCloseAddEditModal}
+                            onSave={handleSaveMember}
+                            member={editingMember}
+                        />
+                    )}
+                    <DeleteConfirmationModal
+                        isOpen={isDeleteModalOpen}
+                        onClose={() => setIsDeleteModalOpen(false)}
+                        onConfirm={handleDeleteMember}
+                        isDeleting={false}
+                        memberName={deletingMember?.name || ''}
+                    />
+                    <ShareProfileModal
+                        isOpen={isShareModalOpen}
+                        onClose={() => setIsShareModalOpen(false)}
+                        trainerId={user.uid}
+                    />
+                    <ConsultationRequestsModal
+                        isOpen={isConsultationModalOpen}
+                        onClose={() => setIsConsultationModalOpen(false)}
+                        trainerId={user.uid}
+                    />
+                    <AddEditAnnouncementModal
+                        isOpen={isAnnouncementModalOpen}
+                        onClose={() => { setIsAnnouncementModalOpen(false); setEditingAnnouncement(null); }}
+                        onSave={handleSaveAnnouncement}
+                        announcement={editingAnnouncement}
+                    />
+                </>
+            ) : (
+                 <>
+                    {renderContent()}
+                    {isAddEditMemberModalOpen && (
+                         <AddEditMemberModal
+                            isOpen={isAddEditMemberModalOpen}
+                            onClose={handleCloseAddEditModal}
+                            onSave={handleSaveMember}
+                            member={editingMember}
+                        />
+                    )}
+                </>
+            )}
+        </div>
     );
 };
 

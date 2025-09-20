@@ -90,19 +90,23 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                   const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
                   setAnnouncements(data);
                   setLoading(prev => ({ ...prev, announcements: false }));
-              });
-          return () => announcementsUnsub();
+              }, () => setLoading(prev => ({ ...prev, announcements: false })));
+          
+          setLoading(prev => ({...prev, main: false}));
+          
+          return () => {
+            measurementsUnsub();
+            logsUnsub();
+            announcementsUnsub();
+        };
+
       } else {
-          setLoading(prev => ({ ...prev, announcements: false }));
+          setLoading(prev => ({ ...prev, announcements: false, main: false }));
+          return () => {
+            measurementsUnsub();
+            logsUnsub();
+          };
       }
-
-
-      setLoading(prev => ({...prev, main: false}));
-
-      return () => {
-        measurementsUnsub();
-        logsUnsub();
-      };
     };
 
     fetchData();
@@ -335,7 +339,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                            announcements.map(ann => (
                                <div key={ann.id} className="bg-dark p-3 rounded-md">
                                    <p className="font-bold text-white">{ann.title}</p>
-                                   <p className="text-xs text-gray-500 mb-1">{ann.createdAt.toDate().toLocaleDateString('ko-KR')}</p>
+                                   <p className="text-xs text-gray-500 mb-1">{ann.createdAt ? ann.createdAt.toDate().toLocaleDateString('ko-KR') : '방금 전'}</p>
                                    <p className="text-sm text-gray-300 whitespace-pre-wrap">{ann.content}</p>
                                </div>
                            ))
