@@ -17,6 +17,7 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
     const [career, setCareer] = useState('');
     const [gymName, setGymName] = useState('');
     const [gymAddress, setGymAddress] = useState('');
+    const [offersFreeTrial, setOffersFreeTrial] = useState(false);
     
     const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -34,6 +35,7 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
             setCareer(userProfile.career || '');
             setGymName(userProfile.gymName || '');
             setGymAddress(userProfile.gymAddress || '');
+            setOffersFreeTrial(userProfile.offersFreeTrial || false);
             setProfileImagePreview(userProfile.profileImageUrl || null);
             setPromoImagePreview(userProfile.promoImageUrl || null);
         }
@@ -75,6 +77,7 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
                 career,
                 gymName,
                 gymAddress,
+                offersFreeTrial,
             }, profileImageFile, promoImageFile);
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다. 다시 시도해주세요.');
@@ -153,6 +156,28 @@ const EditTrainerProfileModal: React.FC<EditTrainerProfileModalProps> = ({ isOpe
                             placeholder="예: 서울특별시 강남구"
                         />
                     </div>
+                </div>
+
+                <div>
+                    <label htmlFor="offers-free-trial" className="flex items-center justify-between cursor-pointer p-3 bg-dark rounded-lg">
+                        <div>
+                            <span className="text-sm font-medium text-gray-200">1회 무료 체험 제공</span>
+                             <p className="text-xs text-gray-500 mt-1">
+                                활성화하면 프로필에 '1회 무료 체험 가능' 배지가 표시됩니다.
+                            </p>
+                        </div>
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                id="offers-free-trial"
+                                className="sr-only"
+                                checked={offersFreeTrial}
+                                onChange={(e) => setOffersFreeTrial(e.target.checked)}
+                            />
+                            <div className={`block w-14 h-8 rounded-full ${offersFreeTrial ? 'bg-primary' : 'bg-gray-600'}`}></div>
+                            <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${offersFreeTrial ? 'transform translate-x-6' : ''}`}></div>
+                        </div>
+                    </label>
                 </div>
 
                 {/* Promo Image Upload */}

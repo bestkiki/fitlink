@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon, CameraIcon, MapPinIcon } from '../components/icons';
+import { UserCircleIcon, IdCardIcon, DumbbellIcon, ChatBubbleIcon, CameraIcon, MapPinIcon, SparklesIcon } from '../components/icons';
 import ConsultationRequestModal from '../components/ConsultationRequestModal';
 
 interface TrainerPublicProfileProps {
@@ -142,6 +142,12 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                             <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold text-white">
                                 {trainerProfile.name || '트레이너'}
                             </h2>
+                            {trainerProfile.offersFreeTrial && (
+                                <div className="mt-2 inline-flex items-center bg-primary/20 text-primary font-bold px-3 py-1 rounded-full text-sm">
+                                    <SparklesIcon className="w-5 h-5 mr-2"/>
+                                    1회 무료 체험 가능
+                                </div>
+                            )}
                             <p className="mt-2 text-primary font-semibold">{trainerProfile.email}</p>
                         </div>
                         

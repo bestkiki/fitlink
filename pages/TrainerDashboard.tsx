@@ -183,11 +183,12 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             )}
                             <h2 className="text-xl font-bold text-white">내 프로필</h2>
                         </div>
-                        <div className="flex-grow">
+                        <div className="flex-grow space-y-1">
                             <p className="text-gray-400"><strong>이름:</strong> {profile.name || '미지정'}</p>
                             <p className="text-gray-400"><strong>지점명:</strong> {profile.gymName || '미지정'}</p>
                             <p className="text-gray-400"><strong>전문 분야:</strong> {profile.specialization || '미지정'}</p>
                             <p className="text-gray-400"><strong>연락처:</strong> {profile.contact || '미지정'}</p>
+                            <p className="text-gray-400"><strong>무료 체험:</strong> {profile.offersFreeTrial ? <span className="text-primary font-bold">제공</span> : '미제공'}</p>
                         </div>
                         <div className="space-y-2 mt-4">
                             <button onClick={() => setIsProfileModalOpen(true)} className="flex items-center justify-center space-x-2 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors w-full">

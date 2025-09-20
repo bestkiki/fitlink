@@ -31,6 +31,7 @@ export interface UserProfile {
   notes?: string; // Trainer's private notes about a member
   gymName?: string;
   gymAddress?: string;
+  offersFreeTrial?: boolean;
 }
 
 export interface ExerciseSet {
