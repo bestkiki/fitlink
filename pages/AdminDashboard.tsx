@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
-import { db, storage } from '../firebase';
+import { db, storage, firebaseConfig } from '../firebase';
 import { UserProfile, Banner } from '../App';
 import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon } from '../components/icons';
 import AddEditBannerModal from '../components/AddEditBannerModal';
@@ -31,6 +31,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
         return () => unsubscribe();
     }, []);
 
+    const getPathFromStorageUrl = (url: string): string | null => {
+        if (!url.startsWith('https://firebasestorage.googleapis.com')) {
+            return null;
+        }
+        try {
+            const urlObject = new URL(url);
+            const pathName = urlObject.pathname;
+            // FIX: Get storageBucket from the imported firebaseConfig to resolve typing issue.
+            const bucket = firebaseConfig.storageBucket;
+            const prefix = `/v0/b/${bucket}/o/`;
+            if (pathName.startsWith(prefix)) {
+                return decodeURIComponent(pathName.substring(prefix.length));
+            }
+            return null;
+        } catch (e) {
+            console.error("Could not parse storage URL:", e);
+            return null;
+        }
+    };
+
     const handleOpenModal = (banner: Banner | null) => {
         setEditingBanner(banner);
         setIsModalOpen(true);
@@ -46,16 +66,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             // 1. Upload new image if provided
             if (imageFile) {
                 // Delete old image if it exists and we are uploading a new one
-                if (editingBanner?.imageUrl && (editingBanner.imageUrl.startsWith('gs://') || editingBanner.imageUrl.startsWith('https://'))) {
+                if (editingBanner?.imageUrl) {
                     try {
-                        const oldImageRef = storage.refFromURL(editingBanner.imageUrl);
-                        await oldImageRef.delete();
+                        const oldImagePath = getPathFromStorageUrl(editingBanner.imageUrl);
+                        if (oldImagePath) {
+                           await storage.ref(oldImagePath).delete();
+                        }
                     } catch (storageError) {
                         console.warn("Old image deletion failed, might not exist:", storageError);
                     }
                 }
                 const fileName = `${Date.now()}-${imageFile.name}`;
-                // Revert to a simpler path, as the rule will now check for admin status directly.
                 const storageRef = storage.ref(`banner_images/${fileName}`);
                 const snapshot = await storageRef.put(imageFile);
                 imageUrl = await snapshot.ref.getDownloadURL();
@@ -78,7 +99,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
 
         } catch (err: any) {
             console.error("Error saving banner:", err);
-            throw new Error('배너 저장에 실패했습니다. 다시 시도해주세요.');
+            let errorMessage = '배너 저장에 실패했습니다. 다시 시도해주세요.';
+            if (err.code === 'storage/unauthorized') {
+                errorMessage = '배너 저장 권한이 없습니다. Firebase Storage 보안 규칙을 확인해주세요.';
+            }
+            throw new Error(errorMessage);
         }
     };
     
@@ -90,9 +115,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             await db.collection('banners').doc(banner.id).delete();
             
             // Delete image from Storage
-            if (banner.imageUrl && (banner.imageUrl.startsWith('gs://') || banner.imageUrl.startsWith('https://'))) {
-                const imageRef = storage.refFromURL(banner.imageUrl);
-                await imageRef.delete();
+            if (banner.imageUrl) {
+                const imagePath = getPathFromStorageUrl(banner.imageUrl);
+                if (imagePath) {
+                    await storage.ref(imagePath).delete();
+                }
             }
 
         } catch (error) {
