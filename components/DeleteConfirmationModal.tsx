@@ -14,10 +14,10 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpe
         <Modal isOpen={isOpen} onClose={onClose} title="회원 삭제 확인">
             <div className="text-gray-300">
                 <p>
-                    정말로 <span className="font-bold text-secondary">{memberName}</span> 회원을 삭제하시겠습니까?
+                    정말로 <span className="font-bold text-secondary">{memberName}</span> 회원을 목록에서 삭제하시겠습니까?
                 </p>
                 <p className="mt-2 text-sm text-gray-400">
-                    이 작업은 되돌릴 수 없으며, 해당 회원의 모든 정보가 영구적으로 삭제됩니다.
+                    이 작업은 되돌릴 수 없으며, 회원 목록에서 해당 회원을 제거합니다. 회원의 계정이나 데이터는 삭제되지 않습니다.
                 </p>
             </div>
             <div className="flex justify-end space-x-3 pt-6">
