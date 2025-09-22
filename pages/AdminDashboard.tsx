@@ -55,8 +55,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
                     }
                 }
                 const fileName = `${Date.now()}-${imageFile.name}`;
-                // FIX: Scope banner images to the admin's UID to align with likely storage rules
-                const storageRef = storage.ref(`banner_images/${user.uid}/${fileName}`);
+                // Revert to a simpler path, as the rule will now check for admin status directly.
+                const storageRef = storage.ref(`banner_images/${fileName}`);
                 const snapshot = await storageRef.put(imageFile);
                 imageUrl = await snapshot.ref.getDownloadURL();
             }
