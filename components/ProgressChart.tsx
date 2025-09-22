@@ -83,8 +83,9 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ measurements }) => {
 
     // FIX: Replaced unreliable date string parsing to resolve TypeScript error and improve reliability. Using timestamps and `setHours` to normalize dates avoids issues with locale-specific string formats passed to `new Date()`.
     // FIX: Replaced `Array.from` with spread syntax `[...]` to correctly infer the array type and resolve the TypeScript error with `unknown` type.
+    // FIX: Explicitly cast `ts` to `number` to resolve a type inference issue where it was being inferred as `unknown`.
     const uniqueDates = [...new Set(allDates.map(ts => new Date(ts).setHours(0, 0, 0, 0)))]
-        .map(ts => new Date(ts))
+        .map(ts => new Date(ts as number))
         .sort((a,b) => a.getTime() - b.getTime());
 
     let xAxisLabels = uniqueDates;
