@@ -38,6 +38,16 @@ export interface UserProfile {
   offersFreeTrial?: boolean;
 }
 
+export interface Banner {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  isActive: boolean;
+  targetAudience: 'all' | 'trainer' | 'member';
+  createdAt: firebase.firestore.Timestamp;
+}
+
 export interface ExerciseSet {
   reps: number;
   weight: number;
