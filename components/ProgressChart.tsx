@@ -81,8 +81,9 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ measurements }) => {
         }
     }
 
-    const uniqueDates = [...new Set(allDates.map(d => new Date(d).toLocaleDateString()))]
-        .map(d => new Date(d))
+    // FIX: Replaced unreliable date string parsing to resolve TypeScript error and improve reliability. Using timestamps and `setHours` to normalize dates avoids issues with locale-specific string formats passed to `new Date()`.
+    const uniqueDates = [...new Set(allDates.map(ts => new Date(ts).setHours(0, 0, 0, 0)))]
+        .map(ts => new Date(ts))
         .sort((a,b) => a.getTime() - b.getTime());
 
     let xAxisLabels = uniqueDates;

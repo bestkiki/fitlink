@@ -7,6 +7,7 @@ import 'firebase/compat/auth';
 import { UserProfile } from './App';
 import TrainerDashboard from './pages/TrainerDashboard';
 import MemberDashboard from './pages/MemberDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 interface AuthenticatedAppProps {
   // FIX: Used firebase.User type.
@@ -15,10 +16,17 @@ interface AuthenticatedAppProps {
 }
 
 const AuthenticatedApp: React.FC<AuthenticatedAppProps> = ({ user, userProfile }) => {
+  // 1. Check for Admin role first
+  if (userProfile.isAdmin) {
+    return <AdminDashboard user={user} userProfile={userProfile} />;
+  }
+
+  // 2. Check for Trainer role
   if (userProfile.role === 'trainer') {
     return <TrainerDashboard user={user} userProfile={userProfile} />;
   }
 
+  // 3. Check for Member role
   if (userProfile.role === 'member') {
     return <MemberDashboard user={user} userProfile={userProfile} />;
   }

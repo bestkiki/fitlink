@@ -22,6 +22,7 @@ export interface UserProfile {
   contact?: string;
   profileImageUrl?: string;
   promoImageUrl?: string;
+  isAdmin?: boolean;
   // Member specific
   goal?: string;
   trainerId?: string;
