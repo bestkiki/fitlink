@@ -46,7 +46,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             // 1. Upload new image if provided
             if (imageFile) {
                 // Delete old image if it exists and we are uploading a new one
-                if (editingBanner?.imageUrl) {
+                if (editingBanner?.imageUrl && (editingBanner.imageUrl.startsWith('gs://') || editingBanner.imageUrl.startsWith('https://'))) {
                     try {
                         const oldImageRef = storage.refFromURL(editingBanner.imageUrl);
                         await oldImageRef.delete();
@@ -89,8 +89,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             await db.collection('banners').doc(banner.id).delete();
             
             // Delete image from Storage
-            const imageRef = storage.refFromURL(banner.imageUrl);
-            await imageRef.delete();
+            if (banner.imageUrl && (banner.imageUrl.startsWith('gs://') || banner.imageUrl.startsWith('https://'))) {
+                const imageRef = storage.refFromURL(banner.imageUrl);
+                await imageRef.delete();
+            }
 
         } catch (error) {
             console.error("Error deleting banner:", error);
