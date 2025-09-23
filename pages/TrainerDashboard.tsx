@@ -85,13 +85,23 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     useEffect(() => {
         const unsubscribeBanners = db.collection('banners')
             .where('isActive', '==', true)
-            .where('targetAudience', 'in', ['all', 'trainer'])
-            .orderBy('createdAt', 'desc')
             .onSnapshot(snapshot => {
-                const bannerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
-                setBanners(bannerData);
+                const allActiveBanners = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+                
+                const relevantBanners = allActiveBanners
+                    .filter(banner => ['all', 'trainer'].includes(banner.targetAudience))
+                    .sort((a, b) => {
+                        const timeA = a.createdAt?.toMillis() || 0;
+                        const timeB = b.createdAt?.toMillis() || 0;
+                        return timeB - timeA;
+                    });
+
+                setBanners(relevantBanners);
                 setLoadingBanners(false);
-            }, () => setLoadingBanners(false));
+            }, (error) => {
+                console.error("Error fetching banners:", error);
+                setLoadingBanners(false);
+            });
 
         return () => unsubscribeBanners();
     }, []);
