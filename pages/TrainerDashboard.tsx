@@ -305,17 +305,17 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 </a>
                                 {banners.length > 1 && (
                                 <>
-                                    <div className="absolute inset-0 flex items-center justify-between p-4">
-                                        <button onClick={prevBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute inset-0 flex items-center justify-between p-4 pointer-events-none">
+                                        <button onClick={prevBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                                         </button>
-                                        <button onClick={nextBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={nextBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                         </button>
                                     </div>
                                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
                                         {banners.map((_, index) => (
-                                            <button key={index} onClick={() => setCurrentBanner(index)} className={`w-2 h-2 rounded-full transition-colors ${currentBanner === index ? 'bg-white' : 'bg-white/50 hover:bg-white/75'}`}></button>
+                                            <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentBanner(index); }} className={`w-2 h-2 rounded-full transition-colors ${currentBanner === index ? 'bg-white' : 'bg-white/50 hover:bg-white/75'}`}></button>
                                         ))}
                                     </div>
                                 </>
