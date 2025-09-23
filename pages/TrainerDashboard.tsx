@@ -283,9 +283,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!
                         </p>
                         
-                        {!loadingBanners && banners.length > 0 && (
+                        {!loadingBanners && banners.length > 0 && banners[currentBanner] && (
                             <div className="relative w-full max-w-5xl mx-auto mb-8 group">
-                                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-[16/6] bg-dark-accent rounded-lg overflow-hidden shadow-lg">
+                                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video bg-dark-accent rounded-lg overflow-hidden shadow-lg">
                                     <img 
                                         src={banners[currentBanner].imageUrl} 
                                         alt={banners[currentBanner].title} 
@@ -297,10 +297,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 <>
                                     <div className="absolute inset-0 flex items-center justify-between p-4">
                                         <button onClick={prevBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                                         </button>
                                         <button onClick={nextBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                         </button>
                                     </div>
                                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">

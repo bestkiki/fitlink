@@ -73,6 +73,7 @@ const AddEditBannerModal: React.FC<AddEditBannerModalProps> = ({ isOpen, onClose
                         className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="https://example.com/image.png"
                     />
+                    <p className="mt-2 text-xs text-gray-400">최적의 표시를 위해 16:9 비율의 이미지를 권장합니다.</p>
                 </div>
 
                 <div className="mt-2">
