@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement } from '../App';
+import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement, Banner } from '../App';
 import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon, QuestionMarkCircleIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
@@ -31,6 +31,9 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const [personalExerciseLogs, setPersonalExerciseLogs] = useState<PersonalExerciseLog[]>([]);
   const [dietLog, setDietLog] = useState<DietLog | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(true);
+  const [currentBanner, setCurrentBanner] = useState(0);
   const [loading, setLoading] = useState({
     main: true,
     personalLogs: true,
@@ -115,6 +118,29 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
     fetchData();
   }, [user.uid, profile.trainerId]);
+  
+  useEffect(() => {
+    const unsubscribeBanners = db.collection('banners')
+        .where('isActive', '==', true)
+        .where('targetAudience', 'in', ['all', 'member'])
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(snapshot => {
+            const bannerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+            setBanners(bannerData);
+            setLoadingBanners(false);
+        }, () => setLoadingBanners(false));
+
+    return () => unsubscribeBanners();
+  }, []);
+
+  useEffect(() => {
+      if (banners.length > 1) {
+          const timer = setTimeout(() => {
+              setCurrentBanner(prev => (prev + 1) % banners.length);
+          }, 5000);
+          return () => clearTimeout(timer);
+      }
+  }, [currentBanner, banners.length]);
 
   useEffect(() => {
     const userRef = db.collection('users').doc(user.uid);
@@ -297,6 +323,14 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   const remainingSessions = totalSessions - usedSessions;
   const progressPercentage = totalSessions > 0 ? (usedSessions / totalSessions) * 100 : 0;
 
+  const nextBanner = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setCurrentBanner(prev => (prev + 1) % banners.length);
+  };
+  const prevBanner = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setCurrentBanner(prev => (prev - 1 + banners.length) % banners.length);
+  };
 
   return (
     <>
@@ -307,6 +341,36 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
         <p className="text-lg text-gray-300 mb-8">
           환영합니다, <span className="font-semibold text-secondary">{profile.name || user.email}</span> 님!
         </p>
+        
+        {!loadingBanners && banners.length > 0 && (
+            <div className="relative w-full max-w-5xl mx-auto mb-8 group">
+                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-[16/6] bg-dark-accent rounded-lg overflow-hidden shadow-lg">
+                    <img 
+                        src={banners[currentBanner].imageUrl} 
+                        alt={banners[currentBanner].title} 
+                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
+                        key={banners[currentBanner].id}
+                    />
+                </a>
+                {banners.length > 1 && (
+                <>
+                    <div className="absolute inset-0 flex items-center justify-between p-4">
+                        <button onClick={prevBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+                        <button onClick={nextBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                        {banners.map((_, index) => (
+                            <button key={index} onClick={() => setCurrentBanner(index)} className={`w-2 h-2 rounded-full transition-colors ${currentBanner === index ? 'bg-white' : 'bg-white/50 hover:bg-white/75'}`}></button>
+                        ))}
+                    </div>
+                </>
+                )}
+            </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8">
             <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">

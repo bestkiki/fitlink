@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
-import { UserProfile, ConsultationRequest, Announcement } from '../App';
+import { UserProfile, ConsultationRequest, Announcement, Banner } from '../App';
 import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon, QuestionMarkCircleIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
@@ -34,6 +34,9 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [consultationRequests, setConsultationRequests] = useState<ConsultationRequest[]>([]);
+    const [banners, setBanners] = useState<Banner[]>([]);
+    const [loadingBanners, setLoadingBanners] = useState(true);
+    const [currentBanner, setCurrentBanner] = useState(0);
     
     // View and modal states
     const [currentView, setCurrentView] = useState<TrainerView>('dashboard');
@@ -78,6 +81,29 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             unsubscribeAnnouncements();
         };
     }, [user.uid]);
+
+    useEffect(() => {
+        const unsubscribeBanners = db.collection('banners')
+            .where('isActive', '==', true)
+            .where('targetAudience', 'in', ['all', 'trainer'])
+            .orderBy('createdAt', 'desc')
+            .onSnapshot(snapshot => {
+                const bannerData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+                setBanners(bannerData);
+                setLoadingBanners(false);
+            }, () => setLoadingBanners(false));
+
+        return () => unsubscribeBanners();
+    }, []);
+
+    useEffect(() => {
+        if (banners.length > 1) {
+            const timer = setTimeout(() => {
+                setCurrentBanner(prev => (prev + 1) % banners.length);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [currentBanner, banners.length]);
     
     const handleSaveProfile = async (
         profileData: Partial<UserProfile>, 
@@ -242,12 +268,50 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             case 'qna':
                 return <QnAPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
             default:
+                const nextBanner = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setCurrentBanner(prev => (prev + 1) % banners.length);
+                };
+                const prevBanner = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setCurrentBanner(prev => (prev - 1 + banners.length) % banners.length);
+                };
                 return (
                     <div className="container mx-auto px-6 py-12">
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">트레이너 대시보드</h1>
                         <p className="text-lg text-gray-300 mb-8">
                             환영합니다, <span className="font-semibold text-primary">{profile.name || user.email}</span> 님!
                         </p>
+                        
+                        {!loadingBanners && banners.length > 0 && (
+                            <div className="relative w-full max-w-5xl mx-auto mb-8 group">
+                                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-[16/6] bg-dark-accent rounded-lg overflow-hidden shadow-lg">
+                                    <img 
+                                        src={banners[currentBanner].imageUrl} 
+                                        alt={banners[currentBanner].title} 
+                                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
+                                        key={banners[currentBanner].id}
+                                    />
+                                </a>
+                                {banners.length > 1 && (
+                                <>
+                                    <div className="absolute inset-0 flex items-center justify-between p-4">
+                                        <button onClick={prevBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                                        </button>
+                                        <button onClick={nextBanner} className="bg-black/30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                        </button>
+                                    </div>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                                        {banners.map((_, index) => (
+                                            <button key={index} onClick={() => setCurrentBanner(index)} className={`w-2 h-2 rounded-full transition-colors ${currentBanner === index ? 'bg-white' : 'bg-white/50 hover:bg-white/75'}`}></button>
+                                        ))}
+                                    </div>
+                                </>
+                                )}
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-8">
                             <div className="bg-dark-accent p-6 rounded-lg shadow-lg flex flex-col xl:col-span-1">
