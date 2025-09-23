@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
-import { db, storage, firebaseConfig } from '../firebase';
+import { db } from '../firebase';
 import { UserProfile, Banner } from '../App';
 import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon } from '../components/icons';
 import AddEditBannerModal from '../components/AddEditBannerModal';
@@ -31,65 +31,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
         return () => unsubscribe();
     }, []);
 
-    const getPathFromStorageUrl = (url: string): string | null => {
-        if (!url.startsWith('https://firebasestorage.googleapis.com')) {
-            return null;
-        }
-        try {
-            const urlObject = new URL(url);
-            const pathName = urlObject.pathname;
-            // FIX: Get storageBucket from the imported firebaseConfig to resolve typing issue.
-            const bucket = firebaseConfig.storageBucket;
-            const prefix = `/v0/b/${bucket}/o/`;
-            if (pathName.startsWith(prefix)) {
-                return decodeURIComponent(pathName.substring(prefix.length));
-            }
-            return null;
-        } catch (e) {
-            console.error("Could not parse storage URL:", e);
-            return null;
-        }
-    };
-
     const handleOpenModal = (banner: Banner | null) => {
         setEditingBanner(banner);
         setIsModalOpen(true);
     };
 
     const handleSaveBanner = async (
-        bannerData: Omit<Banner, 'id' | 'createdAt' | 'imageUrl'>, 
-        imageFile?: File | null
+        bannerData: Omit<Banner, 'id' | 'createdAt'>
     ) => {
         try {
-            let imageUrl = editingBanner?.imageUrl || '';
-
-            // 1. Upload new image if provided
-            if (imageFile) {
-                // Delete old image if it exists and we are uploading a new one
-                if (editingBanner?.imageUrl) {
-                    try {
-                        const oldImagePath = getPathFromStorageUrl(editingBanner.imageUrl);
-                        if (oldImagePath) {
-                           await storage.ref(oldImagePath).delete();
-                        }
-                    } catch (storageError) {
-                        console.warn("Old image deletion failed, might not exist:", storageError);
-                    }
-                }
-                const fileName = `${Date.now()}-${imageFile.name}`;
-                const storageRef = storage.ref(`banner_images/${fileName}`);
-                const snapshot = await storageRef.put(imageFile);
-                imageUrl = await snapshot.ref.getDownloadURL();
-            }
-
-            const dataToSave = { ...bannerData, imageUrl };
-
-            // 2. Save to Firestore
             if (editingBanner) {
-                await db.collection('banners').doc(editingBanner.id).update(dataToSave);
+                // Editing existing banner
+                await db.collection('banners').doc(editingBanner.id).update(bannerData);
             } else {
+                // Creating new banner
                 await db.collection('banners').add({
-                    ...dataToSave,
+                    ...bannerData,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 });
             }
@@ -99,11 +56,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
 
         } catch (err: any) {
             console.error("Error saving banner:", err);
-            let errorMessage = '배너 저장에 실패했습니다. 다시 시도해주세요.';
-            if (err.code === 'storage/unauthorized') {
-                errorMessage = '배너 저장 권한이 없습니다. Firebase Storage 보안 규칙을 확인해주세요.';
-            }
-            throw new Error(errorMessage);
+            throw new Error('배너 저장에 실패했습니다. 다시 시도해주세요.');
         }
     };
     
@@ -111,17 +64,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
         if (!window.confirm(`정말로 "${banner.title}" 배너를 삭제하시겠습니까?`)) return;
 
         try {
-            // Delete Firestore document
+            // Delete Firestore document. The image is now hosted externally and not managed here.
             await db.collection('banners').doc(banner.id).delete();
-            
-            // Delete image from Storage
-            if (banner.imageUrl) {
-                const imagePath = getPathFromStorageUrl(banner.imageUrl);
-                if (imagePath) {
-                    await storage.ref(imagePath).delete();
-                }
-            }
-
         } catch (error) {
             console.error("Error deleting banner:", error);
             alert("배너 삭제에 실패했습니다.");
