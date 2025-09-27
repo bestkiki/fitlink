@@ -9,7 +9,7 @@ import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
 import MessageHistory from './MessageHistory';
 import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
-import AddDietLogModal from '../components/AddDietLogModal';
+import AddEditDietLogModal from '../components/AddEditDietLogModal';
 import FindTrainersPage from './FindTrainersPage';
 import CommunityPage from './CommunityPage';
 import MemberChallengesPage from './MemberChallengesPage';
@@ -50,6 +50,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
   const [isDietModalOpen, setIsDietModalOpen] = useState(false);
   const [editingMealType, setEditingMealType] = useState<MealType | null>(null);
+  const [editingFoodItem, setEditingFoodItem] = useState<FoodItem | null>(null);
 
   useEffect(() => {
       const unsubProfile = db.collection('users').doc(user.uid).onSnapshot(doc => {
@@ -234,47 +235,71 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   };
   
   // --- Diet Log Handlers ---
-  const handleOpenDietModal = (mealType: MealType) => {
+  const handleOpenAddDietModal = (mealType: MealType) => {
     setEditingMealType(mealType);
+    setEditingFoodItem(null);
     setIsDietModalOpen(true);
   };
 
-  const handleSaveDietLog = async (foodName: string, calories: number) => {
+  const handleOpenEditDietModal = (mealType: MealType, foodItem: FoodItem) => {
+    setEditingMealType(mealType);
+    setEditingFoodItem(foodItem);
+    setIsDietModalOpen(true);
+  };
+
+  const handleSaveFoodItem = async (foodData: { foodName: string; calories: number }, originalFoodItem: FoodItem | null) => {
     if (!editingMealType) return;
-    
+
     const todayStr = new Date().toISOString().split('T')[0];
     const docRef = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr);
 
-    const newFoodItem: FoodItem = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      foodName,
-      calories
-    };
-
     try {
-        const doc = await docRef.get();
-        if (doc.exists) {
-            await docRef.update({
-                [`meals.${editingMealType}`]: firebase.firestore.FieldValue.arrayUnion(newFoodItem),
-                totalCalories: firebase.firestore.FieldValue.increment(calories),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            });
-        } else {
-            const initialMeals = { breakfast: [], lunch: [], dinner: [], snacks: [] };
-            initialMeals[editingMealType] = [newFoodItem];
-            await docRef.set({
-                date: todayStr,
-                meals: initialMeals,
-                totalCalories: calories,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            });
-        }
-    } catch(error) {
-        console.error("Error saving diet log: ", error);
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(docRef);
+
+            if (!doc.exists) {
+                // If adding the very first item for the day
+                const newFoodItem: FoodItem = { id: Date.now().toString(), ...foodData };
+                const initialMeals = { breakfast: [], lunch: [], dinner: [], snacks: [] };
+                initialMeals[editingMealType] = [newFoodItem];
+                transaction.set(docRef, {
+                    date: todayStr,
+                    meals: initialMeals,
+                    totalCalories: foodData.calories,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            } else {
+                const currentData = doc.data() as DietLog;
+                const meals = currentData.meals;
+                let calorieChange = 0;
+
+                if (originalFoodItem) { // Editing
+                    const mealItems = meals[editingMealType];
+                    const itemIndex = mealItems.findIndex(item => item.id === originalFoodItem.id);
+                    if (itemIndex > -1) {
+                        calorieChange = foodData.calories - mealItems[itemIndex].calories;
+                        mealItems[itemIndex] = { ...mealItems[itemIndex], ...foodData };
+                    }
+                } else { // Adding
+                    const newFoodItem: FoodItem = { id: Date.now().toString(), ...foodData };
+                    meals[editingMealType].push(newFoodItem);
+                    calorieChange = foodData.calories;
+                }
+                
+                transaction.update(docRef, {
+                    meals,
+                    totalCalories: firebase.firestore.FieldValue.increment(calorieChange),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Error saving food item: ", error);
         alert("식단 저장에 실패했습니다.");
     } finally {
         setIsDietModalOpen(false);
         setEditingMealType(null);
+        setEditingFoodItem(null);
     }
   };
 
@@ -532,7 +557,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                                 <div key={meal.key}>
                                     <div className="flex justify-between items-center mb-1">
                                         <h3 className="font-semibold text-gray-300">{meal.name}</h3>
-                                        <button onClick={() => handleOpenDietModal(meal.key)} className="p-1 text-secondary hover:text-orange-400">
+                                        <button onClick={() => handleOpenAddDietModal(meal.key)} className="p-1 text-secondary hover:text-orange-400">
                                             <PlusCircleIcon className="w-5 h-5"/>
                                         </button>
                                     </div>
@@ -543,6 +568,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                                                     <span className="text-gray-300">{food.foodName}</span>
                                                     <div className="flex items-center space-x-2">
                                                         <span className="text-gray-400">{food.calories} kcal</span>
+                                                        <button onClick={() => handleOpenEditDietModal(meal.key, food)} className="p-0.5"><PencilIcon className="w-4 h-4 text-gray-500 hover:text-primary"/></button>
                                                         <button onClick={() => handleDeleteFoodItem(meal.key, food)} className="p-0.5"><TrashIcon className="w-4 h-4 text-gray-500 hover:text-red-400"/></button>
                                                     </div>
                                                 </div>
@@ -653,11 +679,16 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
         onSave={handleSavePersonalLog}
         log={editingPersonalLog}
       />
-      <AddDietLogModal
+      <AddEditDietLogModal
         isOpen={isDietModalOpen}
-        onClose={() => setIsDietModalOpen(false)}
-        onSave={handleSaveDietLog}
+        onClose={() => {
+            setIsDietModalOpen(false);
+            setEditingMealType(null);
+            setEditingFoodItem(null);
+        }}
+        onSave={handleSaveFoodItem}
         mealType={editingMealType}
+        foodItemToEdit={editingFoodItem}
       />
     </>
   );

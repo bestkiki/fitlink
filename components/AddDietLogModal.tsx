@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import { MealType } from '../App';
+import { MealType, FoodItem } from '../App';
 
-interface AddDietLogModalProps {
+interface AddEditDietLogModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (foodName: string, calories: number) => Promise<void>;
+    onSave: (foodData: { foodName: string, calories: number }, originalFoodItem: FoodItem | null) => Promise<void>;
     mealType: MealType | null;
+    foodItemToEdit: FoodItem | null;
 }
 
-const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSave, mealType }) => {
+const AddEditDietLogModal: React.FC<AddEditDietLogModalProps> = ({ isOpen, onClose, onSave, mealType, foodItemToEdit }) => {
     const [foodName, setFoodName] = useState('');
     const [calories, setCalories] = useState<number | ''>('');
     const [isSaving, setIsSaving] = useState(false);
@@ -17,12 +18,17 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
 
     useEffect(() => {
         if (isOpen) {
-            setFoodName('');
-            setCalories('');
+            if (foodItemToEdit) {
+                setFoodName(foodItemToEdit.foodName);
+                setCalories(foodItemToEdit.calories);
+            } else {
+                setFoodName('');
+                setCalories('');
+            }
             setError('');
             setIsSaving(false);
         }
-    }, [isOpen]);
+    }, [isOpen, foodItemToEdit]);
 
     const mealTypeToKorean = (type: MealType | null) => {
         switch (type) {
@@ -33,6 +39,10 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
             default: return '';
         }
     };
+    
+    const modalTitle = foodItemToEdit 
+        ? `${mealTypeToKorean(mealType)} 식단 수정` 
+        : `${mealTypeToKorean(mealType)} 식단 추가`;
 
     const handleSubmit = async () => {
         if (!foodName.trim()) {
@@ -47,7 +57,7 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
         setIsSaving(true);
         setError('');
         try {
-            await onSave(foodName.trim(), Number(calories));
+            await onSave({ foodName: foodName.trim(), calories: Number(calories) }, foodItemToEdit);
         } catch (e) {
             setError('저장에 실패했습니다. 다시 시도해주세요.');
             setIsSaving(false);
@@ -55,7 +65,7 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${mealTypeToKorean(mealType)} 식단 추가`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
             <div className="space-y-4">
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div>
@@ -85,7 +95,7 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
                         취소
                     </button>
                     <button onClick={handleSubmit} disabled={isSaving} className="bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isSaving ? '저장 중...' : '추가하기'}
+                        {isSaving ? '저장 중...' : (foodItemToEdit ? '수정하기' : '추가하기')}
                     </button>
                 </div>
             </div>
@@ -93,4 +103,4 @@ const AddDietLogModal: React.FC<AddDietLogModalProps> = ({ isOpen, onClose, onSa
     );
 };
 
-export default AddDietLogModal;
+export default AddEditDietLogModal;
