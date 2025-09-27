@@ -1,6 +1,6 @@
 // /api/fatsecret.ts
 // Vercel Serverless Function to securely proxy requests to the Fatsecret API.
-// This version is compatible with the Vercel Node.js runtime.
+// This version is compatible with the Vercel Node.js runtime and uses the correct POST method.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -56,28 +56,41 @@ async function getAccessToken() {
 
 // The main serverless function handler that Vercel will execute.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
+  // FIX: Changed to allow POST requests as required by the Fatsecret search API
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
   
   try {
-    const searchQuery = req.query.search;
+    // FIX: Read search query from the request body for POST method
+    const { search: searchQuery } = req.body;
 
     if (!searchQuery || typeof searchQuery !== 'string') {
-      return res.status(400).json({ error: 'Search query is required' });
+      return res.status(400).json({ error: 'Search query is required in the request body' });
     }
 
     // Get a valid access token.
     const accessToken = await getAccessToken();
 
-    // Use the token to search for foods.
-    const searchUrl = `https://platform.fatsecret.com/rest/server.api?method=foods.search&search_expression=${encodeURIComponent(searchQuery)}&format=json&region=KR&language=ko`;
+    // FIX: Prepare the request body for the POST request
+    const searchParams = new URLSearchParams();
+    searchParams.append('method', 'foods.search');
+    searchParams.append('search_expression', searchQuery);
+    searchParams.append('format', 'json');
+    searchParams.append('region', 'KR');
+    searchParams.append('language', 'ko');
+
+    // FIX: Use the correct POST method to search for foods.
+    const searchUrl = `https://platform.fatsecret.com/rest/server.api`;
     
     const searchResponse = await fetch(searchUrl, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Bearer ${accessToken}`,
       },
+      body: searchParams.toString(),
     });
 
     if (!searchResponse.ok) {

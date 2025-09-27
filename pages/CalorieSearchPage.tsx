@@ -26,6 +26,7 @@ interface AddToMealModalProps {
 
 // A simple regex to parse calorie info from the description string
 const parseCalories = (description: string): number | null => {
+    // Example: "Per 100g - Calories: 105kcal | Fat: 0.39g | Carbs: 26.95g | Protein: 1.29g"
     const match = description.match(/Calories: (\d+(\.\d+)?)kcal/);
     return match ? Math.round(parseFloat(match[1])) : null;
 };
@@ -76,7 +77,15 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
         setResults([]);
 
         try {
-            const response = await fetch(`/api/fatsecret?search=${encodeURIComponent(searchTerm)}`);
+            // FIX: Changed fetch method to POST to match the serverless function and Fatsecret API requirements.
+            const response = await fetch('/api/fatsecret', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ search: searchTerm }),
+            });
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || '검색에 실패했습니다.');
@@ -84,8 +93,12 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
             const data = await response.json();
             
             if (data.foods && data.foods.food) {
+                // The API can return a single object or an array, so we normalize it.
                 const foodArray = Array.isArray(data.foods.food) ? data.foods.food : [data.foods.food];
                 setResults(foodArray);
+                 if (foodArray.length === 0) {
+                    setError('검색 결과가 없습니다. 다른 키워드로 시도해보세요.');
+                }
             } else {
                 setError('검색 결과가 없습니다. 다른 키워드로 시도해보세요.');
             }
@@ -102,7 +115,7 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
         if (calories !== null) {
             setSelectedFood({ ...food, calories });
         } else {
-            alert("칼로리 정보를 파싱할 수 없습니다.");
+            alert("칼로리 정보를 파싱할 수 없습니다. 다른 음식을 선택해주세요.");
         }
     };
 
@@ -110,6 +123,7 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
         if (!selectedFood) return;
         
         await onAddFood(mealType, selectedFood.food_name, selectedFood.calories);
+        alert(`'${selectedFood.food_name}'이(가) 오늘의 식단에 추가되었습니다.`);
         setSelectedFood(null); 
     };
 
@@ -132,7 +146,7 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="예: 사과, 닭가슴살..."
+                        placeholder="예: 바나나, 김치찌개..."
                         className="w-full bg-dark-accent p-3 rounded-lg text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary"
                     />
                     <button type="submit" disabled={loading} className="bg-secondary hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-600">
