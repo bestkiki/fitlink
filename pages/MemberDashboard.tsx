@@ -9,7 +9,7 @@ import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
 import MessageHistory from './MessageHistory';
 import AddEditPersonalLogModal from '../components/AddEditPersonalLogModal';
-import AddEditDietLogModal from '../components/AddEditDietLogModal';
+import AddEditDietLogModal from '../components/AddDietLogModal';
 import FindTrainersPage from './FindTrainersPage';
 import CommunityPage from './CommunityPage';
 import MemberChallengesPage from './MemberChallengesPage';

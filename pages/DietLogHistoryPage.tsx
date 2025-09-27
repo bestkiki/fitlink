@@ -3,7 +3,7 @@ import { db } from '../firebase';
 import { ArrowLeftIcon, ClipboardListIcon, FireIcon, PlusCircleIcon, PencilIcon, TrashIcon } from '../components/icons';
 import { UserProfile, DietLog, MealType, FoodItem } from '../App';
 import firebase from 'firebase/compat/app';
-import AddEditDietLogModal from '../components/AddEditDietLogModal';
+import AddEditDietLogModal from '../components/AddDietLogModal';
 
 interface DietLogHistoryPageProps {
     user: firebase.User;
