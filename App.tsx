@@ -120,8 +120,9 @@ export interface Appointment {
     memberEmail: string;
     startTime: firebase.firestore.Timestamp;
     endTime: firebase.firestore.Timestamp;
-    status: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_trainer';
+    status: 'pending' | 'confirmed' | 'cancelled_by_member' | 'cancelled_by_trainer';
     createdAt: firebase.firestore.Timestamp;
+    cancellationReason?: string;
 }
 
 export interface ConsultationRequest {

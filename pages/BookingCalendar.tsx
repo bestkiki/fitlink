@@ -19,7 +19,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
     const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
     
     const [slotToBook, setSlotToBook] = useState<Availability | null>(null);
-    const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
+    const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
 
     const trainerId = userProfile.trainerId;
 
@@ -65,7 +65,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
                     memberEmail: userProfile.email,
                     startTime: slotToBook.startTime,
                     endTime: slotToBook.endTime,
-                    status: 'confirmed',
+                    status: 'pending', // Change status to pending
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 });
             });
@@ -73,7 +73,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
             // Notify trainer
             await db.collection('notifications').add({
                 userId: trainerId,
-                message: `${userProfile.name || user.email}님이 ${slotToBook.startTime.toDate().toLocaleString('ko-KR')} 수업을 예약했습니다.`,
+                message: `${userProfile.name || user.email}님이 ${slotToBook.startTime.toDate().toLocaleString('ko-KR')} 수업 예약을 요청했습니다.`,
                 read: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
@@ -87,58 +87,78 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
     };
     
     const handleCancelAppointment = async () => {
-        if (!appointmentToCancel || !trainerId) return;
+        if (!viewingAppointment || !trainerId) return;
 
-        const appointmentRef = db.collection('users').doc(trainerId).collection('appointments').doc(appointmentToCancel.id);
-        const availabilityRef = db.collection('users').doc(trainerId).collection('availabilities').doc();
-
+        const appointmentRef = db.collection('users').doc(trainerId).collection('appointments').doc(viewingAppointment.id);
+        
         try {
-            await db.runTransaction(async (transaction) => {
-                transaction.update(appointmentRef, { status: 'cancelled_by_member' });
-                // Re-create the availability slot for the trainer
-                transaction.set(availabilityRef, {
-                    startTime: appointmentToCancel.startTime,
-                    endTime: appointmentToCancel.endTime,
+            if (viewingAppointment.status === 'pending') {
+                // If cancelling a pending request, just delete it and recreate availability
+                const availabilityRef = db.collection('users').doc(trainerId).collection('availabilities').doc();
+                await db.runTransaction(async (transaction) => {
+                    transaction.delete(appointmentRef);
+                    transaction.set(availabilityRef, {
+                        startTime: viewingAppointment.startTime,
+                        endTime: viewingAppointment.endTime,
+                    });
                 });
-            });
+            } else { // 'confirmed'
+                // If cancelling a confirmed appointment, update status and recreate availability
+                const availabilityRef = db.collection('users').doc(trainerId).collection('availabilities').doc();
+                await db.runTransaction(async (transaction) => {
+                    transaction.update(appointmentRef, { status: 'cancelled_by_member' });
+                    transaction.set(availabilityRef, {
+                        startTime: viewingAppointment.startTime,
+                        endTime: viewingAppointment.endTime,
+                    });
+                    // Decrement used sessions as it was incremented on confirmation
+                    const memberRef = db.collection('users').doc(user.uid);
+                    transaction.update(memberRef, { usedSessions: firebase.firestore.FieldValue.increment(-1) });
+                });
+            }
             
             // Notify trainer
             await db.collection('notifications').add({
                 userId: trainerId,
-                message: `${userProfile.name || user.email}님이 ${appointmentToCancel.startTime.toDate().toLocaleString('ko-KR')} 예약을 취소했습니다.`,
+                message: `${userProfile.name || user.email}님이 ${viewingAppointment.startTime.toDate().toLocaleString('ko-KR')} 예약을 취소했습니다.`,
                 read: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             });
 
-            setAppointmentToCancel(null);
+            setViewingAppointment(null);
         } catch (error) {
             console.error("Error cancelling appointment:", error);
             alert("예약 취소에 실패했습니다.");
-            setAppointmentToCancel(null);
+            setViewingAppointment(null);
         }
     };
     
-
     const calendarEvents = useMemo(() => {
-        const allBookedTimes = myAppointments.map(a => a.startTime.toMillis());
-        const availableSlots = availabilities.filter(avail => !allBookedTimes.includes(avail.startTime.toMillis()));
+        // Timeslots are unavailable if there is a pending or confirmed appointment by ANY member.
+        // But for this member's view, we only need to care about their own appointments.
+        const myPendingOrConfirmedTimes = myAppointments
+            .filter(a => a.status === 'confirmed' || a.status === 'pending')
+            .map(a => a.startTime.toMillis());
+
+        const availableSlots = availabilities.filter(avail => !myPendingOrConfirmedTimes.includes(avail.startTime.toMillis()));
 
         const availabilityEvents = availableSlots.map(avail => ({
             date: avail.startTime.toDate(),
             title: avail.startTime.toDate().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-            color: 'green' as 'green',
+            color: 'green' as const,
             onClick: () => setSlotToBook(avail)
         }));
 
         const appointmentEvents = myAppointments.map(appt => {
-            let color: 'blue' | 'orange' = 'blue';
-            if (appt.status.startsWith('cancelled')) color = 'orange';
+            let color: 'blue' | 'orange' | 'yellow' = 'blue';
+            if (appt.status === 'pending') color = 'yellow';
+            else if (appt.status.startsWith('cancelled')) color = 'orange';
 
             return {
                 date: appt.startTime.toDate(),
                 title: appt.startTime.toDate().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
                 color,
-                onClick: () => appt.status === 'confirmed' && setAppointmentToCancel(appt)
+                onClick: () => setViewingAppointment(appt)
             }
         });
 
@@ -170,9 +190,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
                 <h1 className="text-3xl font-bold mb-2">수업 예약</h1>
                 <p className="text-gray-400 mb-6">트레이너의 예약 가능 시간을 확인하고 수업을 예약하세요.</p>
 
-                <div className="flex space-x-4 text-sm mb-4">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm mb-4">
                     <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>예약 가능</div>
-                    <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>내 예약</div>
+                    <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>예약 대기</div>
+                    <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>예약 확정</div>
                     <div className="flex items-center"><span className="w-3 h-3 rounded-full bg-secondary mr-2"></span>취소된 예약</div>
                 </div>
                 <CalendarGrid 
@@ -183,34 +204,52 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ user, userProfile, on
                 />
             </div>
             {slotToBook && (
-                <Modal isOpen={!!slotToBook} onClose={() => setSlotToBook(null)} title="수업 예약 확인">
+                <Modal isOpen={!!slotToBook} onClose={() => setSlotToBook(null)} title="수업 예약 요청">
                     <p className="text-gray-300">
                         <span className="font-bold text-secondary">{slotToBook.startTime.toDate().toLocaleString('ko-KR')}</span>
                         <br/>
-                        위 시간에 수업을 예약하시겠습니까?
+                        위 시간에 수업을 예약 요청하시겠습니까? 트레이너의 승인 후 예약이 확정됩니다.
                     </p>
                     <div className="flex justify-end space-x-3 pt-6">
                         <button onClick={() => setSlotToBook(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">취소</button>
-                        <button onClick={handleBookSlot} className="bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg">예약</button>
+                        <button onClick={handleBookSlot} className="bg-secondary hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg">요청</button>
                     </div>
                 </Modal>
             )}
-             {appointmentToCancel && (
-                <Modal isOpen={!!appointmentToCancel} onClose={() => setAppointmentToCancel(null)} title="예약 취소 확인">
-                    <p className="text-gray-300">
-                        <span className="font-bold text-primary">{appointmentToCancel.startTime.toDate().toLocaleString('ko-KR')}</span>
-                        <br/>
-                        예약된 수업을 취소하시겠습니까?
-                    </p>
-                     <p className="mt-2 text-sm text-gray-400">
-                        취소하면 트레이너에게 알림이 전송되며, 해당 시간은 다른 회원이 예약할 수 있게 됩니다.
+             {viewingAppointment && (
+                <Modal isOpen={!!viewingAppointment} onClose={() => setViewingAppointment(null)} title="예약 정보">
+                    <div className="space-y-3 text-gray-300">
+                        <p><span className="font-semibold w-20 inline-block text-gray-400">일시:</span> <span className="font-bold">{viewingAppointment.startTime.toDate().toLocaleString('ko-KR')}</span></p>
+                         <p><span className="font-semibold w-20 inline-block text-gray-400">상태:</span> 
+                           <span className={`font-bold ${
+                               viewingAppointment.status === 'pending' ? 'text-yellow-400' :
+                               viewingAppointment.status.startsWith('cancelled') ? 'text-secondary' : 'text-primary'
+                           }`}>
+                               {viewingAppointment.status === 'pending' && '승인 대기중'}
+                               {viewingAppointment.status === 'confirmed' && '예약 확정'}
+                               {viewingAppointment.status === 'cancelled_by_member' && '직접 취소'}
+                               {viewingAppointment.status === 'cancelled_by_trainer' && '트레이너가 취소'}
+                           </span>
+                       </p>
+                       {viewingAppointment.status === 'cancelled_by_trainer' && viewingAppointment.cancellationReason && (
+                           <div className="bg-dark p-3 rounded-md">
+                               <p className="font-semibold text-gray-400 text-sm">취소 사유</p>
+                               <p>{viewingAppointment.cancellationReason}</p>
+                           </div>
+                       )}
+                    </div>
+                     <p className="mt-4 text-sm text-gray-400">
+                        {viewingAppointment.status === 'pending' && '트레이너가 승인하기 전까지 예약을 취소할 수 있습니다.'}
+                        {viewingAppointment.status === 'confirmed' && '예약을 취소하면 트레이너에게 알림이 전송됩니다.'}
                     </p>
                     <div className="flex justify-end space-x-3 pt-6">
-                        <button onClick={() => setAppointmentToCancel(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">닫기</button>
-                        <button onClick={handleCancelAppointment} className="flex items-center space-x-2 bg-red-600/80 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
-                            <TrashIcon className="w-5 h-5" />
-                            <span>예약 취소</span>
-                        </button>
+                        <button onClick={() => setViewingAppointment(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">닫기</button>
+                         {(viewingAppointment.status === 'confirmed' || viewingAppointment.status === 'pending') && (
+                            <button onClick={handleCancelAppointment} className="flex items-center space-x-2 bg-red-600/80 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
+                                <TrashIcon className="w-5 h-5" />
+                                <span>예약 취소</span>
+                            </button>
+                        )}
                     </div>
                 </Modal>
             )}

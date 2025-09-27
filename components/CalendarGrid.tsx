@@ -4,7 +4,7 @@ import { ArrowLeftIcon } from './icons'; // Using ArrowLeftIcon for both directi
 interface CalendarEvent {
     date: Date;
     title: string;
-    color: 'green' | 'blue' | 'orange';
+    color: 'green' | 'blue' | 'orange' | 'yellow';
     onClick: () => void;
 }
 
@@ -85,7 +85,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, setCurrentDate
                                     const colorClasses = {
                                         green: 'bg-green-500/80 hover:bg-green-500',
                                         blue: 'bg-blue-500/80 hover:bg-blue-500',
-                                        orange: 'bg-secondary/80 hover:bg-secondary'
+                                        orange: 'bg-secondary/80 hover:bg-secondary',
+                                        yellow: 'bg-yellow-500/80 hover:bg-yellow-500',
                                     };
                                     return (
                                         <button key={i} onClick={(e) => { e.stopPropagation(); event.onClick(); }} className={`w-full p-1 rounded ${colorClasses[event.color]} text-white truncate`}>
