@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { ArrowLeftIcon, MagnifyingGlassIcon, PlusCircleIcon } from '../components/icons';
 import { MealType } from '../App';
 import Modal from '../components/Modal';
@@ -35,46 +34,45 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
         setSearched(true);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: `For the food query "${searchTerm.trim()}", provide a list of relevant common food items and their approximate calorie information in Korean. The response must be a JSON object.`,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            foods: {
-                                type: Type.ARRAY,
-                                description: "A list of food items with their calorie information.",
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        foodName: { type: Type.STRING, description: "The name of the food item in Korean." },
-                                        calories: { type: Type.NUMBER, description: "The estimated number of calories." },
-                                        servingSize: { type: Type.STRING, description: "The serving size for the calorie count (e.g., '100g', '1개')." }
-                                    },
-                                    required: ["foodName", "calories", "servingSize"]
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(searchTerm.trim())}&fields=product_name_ko,product_name,serving_size,nutriments&json=1&lc=ko&page_size=20`;
+            const response = await fetch(url);
 
-            const jsonText = response.text;
-            const parsed = JSON.parse(jsonText);
-            
-            if (parsed.foods && Array.isArray(parsed.foods)) {
-                setResults(parsed.foods);
+            if (!response.ok) {
+                throw new Error('API 서버에서 응답을 받지 못했습니다.');
+            }
+            const data = await response.json();
+
+            if (data.products && data.products.length > 0) {
+                const formattedResults = data.products
+                    .map((product: any): FoodCalorieInfo | null => {
+                        const calories = product.nutriments?.['energy-kcal_serving'] || product.nutriments?.['energy-kcal_100g'] || null;
+                        const foodName = product.product_name_ko || product.product_name;
+                        
+                        if (!foodName || calories === null) {
+                            return null;
+                        }
+
+                        let servingSize = product.serving_size || 'N/A';
+                         if (product.nutriments?.['energy-kcal_100g'] && !product.nutriments?.['energy-kcal_serving']) {
+                            servingSize = '100g 기준';
+                        }
+
+                        return {
+                            foodName,
+                            calories: Math.round(calories),
+                            servingSize,
+                        };
+                    })
+                    .filter((item: FoodCalorieInfo | null): item is FoodCalorieInfo => item !== null);
+
+                setResults(formattedResults);
             } else {
-                 setResults([]);
+                setResults([]);
             }
 
         } catch (err) {
             console.error("Calorie search error:", err);
-            setError("칼로리 정보 검색에 실패했습니다. Gemini API 키가 올바르게 설정되었는지 확인해주세요.");
+            setError("칼로리 정보 검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         } finally {
             setLoading(false);
         }
@@ -110,9 +108,9 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
                 <div className="max-w-2xl mx-auto">
                     <h1 className="text-3xl font-bold mb-2 flex items-center">
                         <MagnifyingGlassIcon className="w-8 h-8 mr-3 text-secondary"/>
-                        AI 음식 칼로리 검색
+                        음식 칼로리 검색
                     </h1>
-                    <p className="text-gray-400 mb-8">음식 이름을 검색하여 AI가 제공하는 칼로리 정보를 확인하고 식단에 추가하세요.</p>
+                    <p className="text-gray-400 mb-8">음식 이름을 검색하여 칼로리 정보를 확인하고 식단에 추가하세요.</p>
 
                     <form onSubmit={handleSearch} className="mb-8">
                         <div className="relative">
@@ -120,7 +118,7 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
                                 type="text"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                placeholder="예: 신라면 1개, 스타벅스 아메리카노..."
+                                placeholder="예: 김치찌개, 사과..."
                                 className="w-full bg-dark-accent p-4 pl-12 rounded-lg text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary"
                             />
                             <MagnifyingGlassIcon className="w-6 h-6 text-gray-500 absolute top-1/2 left-4 transform -translate-y-1/2"/>
