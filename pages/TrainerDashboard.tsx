@@ -295,11 +295,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                         
                         {!loadingBanners && banners.length > 0 && banners[currentBanner] && (
                             <div className="relative w-full max-w-5xl mx-auto mb-8 group">
-                                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video lg:aspect-auto lg:h-64 bg-dark-accent rounded-lg overflow-hidden shadow-lg">
+                                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video lg:aspect-auto lg:h-64 bg-dark rounded-lg overflow-hidden shadow-lg">
                                     <img 
                                         src={banners[currentBanner].imageUrl} 
                                         alt={banners[currentBanner].title} 
-                                        className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
+                                        className="w-full h-full object-contain transition-transform duration-500 ease-in-out"
                                         key={banners[currentBanner].id}
                                     />
                                 </a>
