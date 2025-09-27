@@ -1,8 +1,8 @@
 // /api/fatsecret.ts
 // Vercel Serverless Function to securely proxy requests to the Fatsecret API.
+// This version is compatible with the Vercel Node.js runtime.
 
-// This function runs on the server, not in the user's browser.
-// It can safely access environment variables without exposing them to the client.
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // A simple in-memory cache to store the access token for its duration.
 let tokenCache = {
@@ -18,7 +18,6 @@ async function getAccessToken() {
     return tokenCache.accessToken;
   }
 
-  // Otherwise, fetch a new token from the Fatsecret API.
   const clientId = process.env.FATSECRET_CLIENT_ID;
   const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
 
@@ -26,16 +25,20 @@ async function getAccessToken() {
     throw new Error('API credentials are not configured on the server.');
   }
 
+  // Node.js 'btoa' is available in modern Vercel runtimes.
+  const basicAuth = btoa(`${clientId}:${clientSecret}`);
+
   const tokenResponse = await fetch('https://oauth.fatsecret.com/connect/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      'Authorization': `Basic ${basicAuth}`,
     },
     body: 'grant_type=client_credentials&scope=basic',
   });
 
   if (!tokenResponse.ok) {
+    console.error('Fatsecret auth failed:', await tokenResponse.text());
     throw new Error('Failed to authenticate with Fatsecret API.');
   }
 
@@ -52,16 +55,17 @@ async function getAccessToken() {
 }
 
 // The main serverless function handler that Vercel will execute.
-export default async function handler(request: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+  
   try {
-    const url = new URL(request.url);
-    const searchQuery = url.searchParams.get('search');
+    const searchQuery = req.query.search;
 
-    if (!searchQuery) {
-      return new Response(JSON.stringify({ error: 'Search query is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!searchQuery || typeof searchQuery !== 'string') {
+      return res.status(400).json({ error: 'Search query is required' });
     }
 
     // Get a valid access token.
@@ -77,22 +81,17 @@ export default async function handler(request: Request) {
     });
 
     if (!searchResponse.ok) {
+      console.error('Fatsecret search failed:', await searchResponse.text());
       throw new Error('Failed to fetch data from Fatsecret.');
     }
 
     const searchData = await searchResponse.json();
     
     // Return the search results to the client.
-    return new Response(JSON.stringify(searchData), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(searchData);
 
   } catch (error) {
     console.error('[FATSECRET API ERROR]', (error as Error).message);
-    return new Response(JSON.stringify({ error: 'An internal server error occurred.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'An internal server error occurred.' });
   }
 }
