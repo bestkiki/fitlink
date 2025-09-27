@@ -354,7 +354,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
         
         {!loadingBanners && banners.length > 0 && banners[currentBanner] && (
             <div className="relative w-full max-w-5xl mx-auto mb-8 group">
-                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video bg-dark-accent rounded-lg overflow-hidden shadow-lg">
+                <a href={banners[currentBanner].linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block w-full aspect-video lg:aspect-auto lg:h-64 bg-dark-accent rounded-lg overflow-hidden shadow-lg">
                     <img 
                         src={banners[currentBanner].imageUrl} 
                         alt={banners[currentBanner].title} 
