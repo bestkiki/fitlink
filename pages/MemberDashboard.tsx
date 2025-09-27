@@ -15,13 +15,14 @@ import CommunityPage from './CommunityPage';
 import MemberChallengesPage from './MemberChallengesPage';
 import QnAPage from './QnAPage';
 import DietLogHistoryPage from './DietLogHistoryPage';
+import CalorieSearchPage from './CalorieSearchPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna' | 'diet_history';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna' | 'diet_history' | 'calorie_search';
 
 // FIX: Encapsulated all logic within the component function to resolve scope-related errors.
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
@@ -321,8 +322,12 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
   const handleBackToDashboard = () => setCurrentView('dashboard');
   
+  if (currentView === 'calorie_search') {
+    return <CalorieSearchPage onBack={() => setCurrentView('diet_history')} />;
+  }
+
   if (currentView === 'diet_history') {
-    return <DietLogHistoryPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+    return <DietLogHistoryPage user={user} userProfile={profile} onBack={handleBackToDashboard} onNavigateToCalorieSearch={() => setCurrentView('calorie_search')} />;
   }
 
   if (currentView === 'booking') {

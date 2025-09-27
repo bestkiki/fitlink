@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { ArrowLeftIcon, ClipboardListIcon, FireIcon, PlusCircleIcon, PencilIcon, TrashIcon } from '../components/icons';
+import { ArrowLeftIcon, ClipboardListIcon, FireIcon, PlusCircleIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon } from '../components/icons';
 import { UserProfile, DietLog, MealType, FoodItem } from '../App';
 import firebase from 'firebase/compat/app';
 import AddEditDietLogModal from '../components/AddDietLogModal';
@@ -9,9 +9,10 @@ interface DietLogHistoryPageProps {
     user: firebase.User;
     userProfile: UserProfile;
     onBack: () => void;
+    onNavigateToCalorieSearch: () => void;
 }
 
-const DietLogHistoryPage: React.FC<DietLogHistoryPageProps> = ({ user, userProfile, onBack }) => {
+const DietLogHistoryPage: React.FC<DietLogHistoryPageProps> = ({ user, userProfile, onBack, onNavigateToCalorieSearch }) => {
     const [dietLogs, setDietLogs] = useState<DietLog[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -140,6 +141,13 @@ const DietLogHistoryPage: React.FC<DietLogHistoryPageProps> = ({ user, userProfi
                         </h1>
                         <p className="text-gray-400">지난 식단 기록을 확인하고 관리할 수 있습니다.</p>
                     </div>
+                    <button 
+                        onClick={onNavigateToCalorieSearch}
+                        className="flex items-center space-x-2 bg-secondary/80 hover:bg-secondary text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4 sm:mt-0"
+                    >
+                        <MagnifyingGlassIcon className="w-5 h-5"/>
+                        <span>칼로리 검색하기</span>
+                    </button>
                 </div>
 
                 <div className="space-y-6">
