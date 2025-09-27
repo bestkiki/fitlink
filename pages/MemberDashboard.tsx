@@ -320,10 +320,46 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
       }
   };
 
+  const handleAddFoodFromSearch = async (mealType: MealType, foodName: string, calories: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const docRef = db.collection('users').doc(user.uid).collection('dietLogs').doc(todayStr);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(docRef);
+            const newFoodItem: FoodItem = { id: Date.now().toString(), foodName, calories };
+
+            if (!doc.exists) {
+                const initialMeals = { breakfast: [], lunch: [], dinner: [], snacks: [] };
+                initialMeals[mealType] = [newFoodItem];
+                transaction.set(docRef, {
+                    date: todayStr,
+                    meals: initialMeals,
+                    totalCalories: calories,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            } else {
+                const currentData = doc.data() as DietLog;
+                const meals = currentData.meals;
+                meals[mealType].push(newFoodItem);
+                
+                transaction.update(docRef, {
+                    meals,
+                    totalCalories: firebase.firestore.FieldValue.increment(calories),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Error adding food from search: ", error);
+        alert("식단 추가에 실패했습니다.");
+    }
+};
+
   const handleBackToDashboard = () => setCurrentView('dashboard');
   
   if (currentView === 'calorie_search') {
-    return <CalorieSearchPage onBack={() => setCurrentView('diet_history')} />;
+    return <CalorieSearchPage onBack={() => setCurrentView('diet_history')} onAddFood={handleAddFoodFromSearch} />;
   }
 
   if (currentView === 'diet_history') {
