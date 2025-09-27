@@ -5,7 +5,7 @@ import { UserProfile } from '../App';
 interface ConsultationRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSend: (message: string, contact?: string, time?: string) => Promise<void>;
+    onSend: (message: string, requestType: 'consultation' | 'assignment', contact?: string, time?: string) => Promise<void>;
     trainerName: string;
     currentUserProfile: UserProfile | null;
 }
@@ -14,6 +14,7 @@ const ConsultationRequestModal: React.FC<ConsultationRequestModalProps> = ({ isO
     const [message, setMessage] = useState('');
     const [contact, setContact] = useState('');
     const [preferredTime, setPreferredTime] = useState('');
+    const [requestType, setRequestType] = useState<'consultation' | 'assignment'>('consultation');
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState('');
 
@@ -22,6 +23,7 @@ const ConsultationRequestModal: React.FC<ConsultationRequestModalProps> = ({ isO
             setMessage('');
             setContact(currentUserProfile?.contact || '');
             setPreferredTime('');
+            setRequestType('consultation');
             setIsSending(false);
             setError('');
         }
@@ -37,7 +39,7 @@ const ConsultationRequestModal: React.FC<ConsultationRequestModalProps> = ({ isO
         setError('');
 
         try {
-            await onSend(message, contact, preferredTime);
+            await onSend(message, requestType, contact, preferredTime);
         } catch (e: any) {
             setError(e.message || '요청 전송에 실패했습니다.');
             setIsSending(false);
@@ -45,10 +47,24 @@ const ConsultationRequestModal: React.FC<ConsultationRequestModalProps> = ({ isO
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${trainerName}님께 상담 요청`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`${trainerName}님께 요청 보내기`}>
             <div className="space-y-4">
                 {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-md">{error}</p>}
                 
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">요청 종류</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <label className={`flex-1 flex items-center p-3 rounded-lg cursor-pointer border-2 transition-colors ${requestType === 'consultation' ? 'border-secondary bg-secondary/10' : 'border-gray-600 bg-dark hover:bg-dark-accent'}`}>
+                            <input type="radio" name="requestType" value="consultation" checked={requestType === 'consultation'} onChange={() => setRequestType('consultation')} className="h-4 w-4 text-secondary bg-dark border-gray-500 focus:ring-secondary"/>
+                            <span className="ml-3 text-sm font-medium text-gray-200">일반 상담 요청</span>
+                        </label>
+                         <label className={`flex-1 flex items-center p-3 rounded-lg cursor-pointer border-2 transition-colors ${requestType === 'assignment' ? 'border-secondary bg-secondary/10' : 'border-gray-600 bg-dark hover:bg-dark-accent'}`}>
+                            <input type="radio" name="requestType" value="assignment" checked={requestType === 'assignment'} onChange={() => setRequestType('assignment')} className="h-4 w-4 text-secondary bg-dark border-gray-500 focus:ring-secondary"/>
+                            <span className="ml-3 text-sm font-medium text-gray-200">담당 트레이너로 지정 요청</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div>
                     <label htmlFor="consultation-message" className="block text-sm font-medium text-gray-300 mb-1">
                         문의 내용 <span className="text-red-400">*</span>

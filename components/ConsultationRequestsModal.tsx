@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
-import { ConsultationRequest } from '../App';
-import { ClockIcon, CheckCircleIcon, TrashIcon, EnvelopeIcon } from './icons';
+import { ConsultationRequest, UserProfile } from '../App';
+import { ClockIcon, CheckCircleIcon, TrashIcon, EnvelopeIcon, UserPlusIcon } from './icons';
 
 interface ConsultationRequestsModalProps {
     isOpen: boolean;
     onClose: () => void;
     trainerId: string;
+    trainerName: string;
 }
 
-const ConsultationRequestsModal: React.FC<ConsultationRequestsModalProps> = ({ isOpen, onClose, trainerId }) => {
+const ConsultationRequestsModal: React.FC<ConsultationRequestsModalProps> = ({ isOpen, onClose, trainerId, trainerName }) => {
     const [requests, setRequests] = useState<ConsultationRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -49,6 +50,42 @@ const ConsultationRequestsModal: React.FC<ConsultationRequestsModalProps> = ({ i
         }
     };
     
+    const handleAcceptRequest = async (request: ConsultationRequest) => {
+        if (!window.confirm(`${request.memberName}님을 회원으로 추가하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+
+        const memberRef = db.collection('users').doc(request.memberId);
+        const requestRef = db.collection('users').doc(trainerId).collection('consultationRequests').doc(request.id);
+
+        try {
+            await db.runTransaction(async (transaction) => {
+                const memberDoc = await transaction.get(memberRef);
+                if (!memberDoc.exists) throw new Error("회원 정보를 찾을 수 없습니다.");
+                
+                const memberData = memberDoc.data() as UserProfile;
+                if (memberData.trainerId) {
+                    throw new Error("해당 회원은 이미 다른 트레이너와 연결되어 있습니다.");
+                }
+
+                // 1. Update member's trainerId
+                transaction.update(memberRef, { trainerId: trainerId });
+                // 2. Update request status
+                transaction.update(requestRef, { status: 'confirmed' });
+            });
+
+            // 3. Send notification to member
+            await db.collection('notifications').add({
+                userId: request.memberId,
+                message: `${trainerName || '트레이너'}님이 회원님의 담당 트레이너 지정을 수락했습니다.`,
+                read: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+        } catch (error) {
+            console.error("Error accepting request:", error);
+            alert((error as Error).message || '요청 수락에 실패했습니다.');
+        }
+    };
+    
     const timeSince = (date: firebase.firestore.Timestamp | undefined): string => {
         if (!date) return '';
         const seconds = Math.floor((new Date().getTime() - date.toDate().getTime()) / 1000);
@@ -76,7 +113,14 @@ const ConsultationRequestsModal: React.FC<ConsultationRequestsModalProps> = ({ i
                     <div key={req.id} className={`p-4 rounded-lg transition-colors ${req.status === 'pending' ? 'bg-dark shadow-md' : 'bg-dark/50'}`}>
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="font-bold text-white">{req.memberName}</p>
+                                <div className="flex items-center">
+                                    <p className="font-bold text-white">{req.memberName}</p>
+                                    {req.requestType === 'assignment' && (
+                                        <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                                            지정 요청
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-sm text-gray-400">{req.memberEmail}</p>
                             </div>
                             <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
@@ -94,7 +138,13 @@ const ConsultationRequestsModal: React.FC<ConsultationRequestsModalProps> = ({ i
                                 {timeSince(req.createdAt)}
                             </p>
                             <div className="flex space-x-2">
-                                {req.status === 'pending' && (
+                                {req.status === 'pending' && req.requestType === 'assignment' && (
+                                    <button onClick={() => handleAcceptRequest(req)} className="flex items-center space-x-2 text-sm bg-primary/80 hover:bg-primary text-white font-bold py-1 pl-2 pr-3 rounded-lg transition-colors">
+                                        <UserPlusIcon className="w-5 h-5"/>
+                                        <span>수락</span>
+                                    </button>
+                                )}
+                                {req.status === 'pending' && req.requestType !== 'assignment' && (
                                     <button onClick={() => handleUpdateRequest(req.id, 'confirmed')} className="p-1.5 rounded-full hover:bg-green-500/20" title="확인됨으로 표시">
                                         <CheckCircleIcon className="w-5 h-5 text-green-400"/>
                                     </button>

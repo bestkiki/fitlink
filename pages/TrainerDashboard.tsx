@@ -523,6 +523,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                         isOpen={isConsultationModalOpen}
                         onClose={() => setIsConsultationModalOpen(false)}
                         trainerId={user.uid}
+                        trainerName={profile.name || ''}
                     />
                     <AddEditAnnouncementModal
                         isOpen={isAnnouncementModalOpen}

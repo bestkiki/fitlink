@@ -47,7 +47,7 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
         fetchTrainerProfile();
     }, [trainerId]);
 
-    const handleSendRequest = async (message: string, contact?: string, time?: string) => {
+    const handleSendRequest = async (message: string, requestType: 'consultation' | 'assignment', contact?: string, time?: string) => {
         if (!currentUser || !currentUserProfile || !trainerProfile) return;
 
         try {
@@ -57,7 +57,8 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                 memberEmail: currentUser.email,
                 message: message,
                 status: 'pending',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                requestType: requestType,
             };
 
             if (contact) requestData.memberContact = contact;
@@ -98,15 +99,15 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
     if (!trainerProfile) return null;
 
     const renderActionButtons = () => {
-        // Case 1: Logged-in Member
-        if (currentUserProfile?.role === 'member') {
+        // Case 1: Logged-in Member with no trainer
+        if (currentUserProfile?.role === 'member' && !currentUserProfile.trainerId) {
             return (
                 <button
                     onClick={() => setIsModalOpen(true)}
                     className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-lg font-medium rounded-md text-white bg-secondary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark focus:ring-secondary transition-transform transform hover:scale-105"
                 >
                    <ChatBubbleIcon className="w-6 h-6 mr-3" />
-                   PT 체험 / 상담 신청하기
+                   PT 상담 / 지정 요청
                 </button>
             );
         }
@@ -121,7 +122,7 @@ const TrainerPublicProfile: React.FC<TrainerPublicProfileProps> = ({ trainerId, 
                 </button>
             );
         }
-        // Case 3: Logged-in Trainer - show nothing
+        // Case 3: Logged-in Trainer or member with a trainer - show nothing
         return null;
     };
 

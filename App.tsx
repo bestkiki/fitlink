@@ -134,6 +134,7 @@ export interface ConsultationRequest {
     createdAt: firebase.firestore.Timestamp;
     memberContact?: string;
     preferredTime?: string;
+    requestType?: 'consultation' | 'assignment';
 }
 
 export interface Announcement {
