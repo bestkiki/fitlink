@@ -14,13 +14,14 @@ import FindTrainersPage from './FindTrainersPage';
 import CommunityPage from './CommunityPage';
 import MemberChallengesPage from './MemberChallengesPage';
 import QnAPage from './QnAPage';
+import DietLogHistoryPage from './DietLogHistoryPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna' | 'diet_history';
 
 // FIX: Encapsulated all logic within the component function to resolve scope-related errors.
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
@@ -295,6 +296,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
   const handleBackToDashboard = () => setCurrentView('dashboard');
   
+  if (currentView === 'diet_history') {
+    return <DietLogHistoryPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+  }
+
   if (currentView === 'booking') {
     return <BookingCalendar user={user} userProfile={profile} onBack={handleBackToDashboard} />;
   }
@@ -504,9 +509,18 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
             <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-white flex items-center"><FireIcon className="w-6 h-6 mr-2 text-secondary"/>오늘의 식단</h2>
-                    <div className="text-right">
-                        <p className="text-2xl font-bold text-secondary">{dietLog?.totalCalories || 0}</p>
-                        <p className="text-sm text-gray-400">kcal</p>
+                    <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                            <p className="text-2xl font-bold text-secondary">{dietLog?.totalCalories || 0}</p>
+                            <p className="text-sm text-gray-400">kcal</p>
+                        </div>
+                        <button 
+                            onClick={() => setCurrentView('diet_history')} 
+                            className="p-2 text-gray-400 hover:text-secondary transition-colors"
+                            title="전체 기록 보기"
+                        >
+                            <ClipboardListIcon className="w-6 h-6"/>
+                        </button>
                     </div>
                 </div>
                 <div className="space-y-4 max-h-[22rem] overflow-y-auto pr-2">
