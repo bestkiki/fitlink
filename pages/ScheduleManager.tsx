@@ -22,6 +22,8 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({ user, onBack }) => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
+    const [availabilityToDelete, setAvailabilityToDelete] = useState<Availability | null>(null);
+
 
     useEffect(() => {
         const availUnsub = db.collection('users').doc(user.uid).collection('availabilities')
@@ -69,6 +71,17 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({ user, onBack }) => {
             alert("예약 취소에 실패했습니다.");
         }
     };
+    
+    const handleDeleteAvailability = async () => {
+        if (!availabilityToDelete) return;
+        try {
+            await db.collection('users').doc(user.uid).collection('availabilities').doc(availabilityToDelete.id).delete();
+            setAvailabilityToDelete(null);
+        } catch (error) {
+            console.error("Error deleting availability:", error);
+            alert("예약 가능 시간 삭제에 실패했습니다.");
+        }
+    };
 
 
     const calendarEvents = useMemo(() => {
@@ -76,7 +89,7 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({ user, onBack }) => {
             date: avail.startTime.toDate(),
             title: avail.startTime.toDate().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
             color: 'green' as 'green',
-            onClick: () => {} // Not clickable for trainer
+            onClick: () => setAvailabilityToDelete(avail)
         }));
 
         const appointmentEvents = appointments.map(appt => {
@@ -145,6 +158,25 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({ user, onBack }) => {
                             </button>
                         </div>
                     )}
+                </Modal>
+            )}
+             {availabilityToDelete && (
+                <Modal isOpen={!!availabilityToDelete} onClose={() => setAvailabilityToDelete(null)} title="예약 가능 시간 삭제">
+                    <p className="text-gray-300">
+                        <span className="font-bold text-primary">{availabilityToDelete.startTime.toDate().toLocaleString('ko-KR')}</span>
+                        <br/>
+                        이 예약 가능 시간을 삭제하시겠습니까?
+                    </p>
+                     <p className="mt-2 text-sm text-gray-400">
+                        이 시간은 더 이상 회원에게 노출되지 않습니다.
+                    </p>
+                    <div className="flex justify-end space-x-3 pt-6">
+                        <button onClick={() => setAvailabilityToDelete(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">취소</button>
+                        <button onClick={handleDeleteAvailability} className="flex items-center space-x-2 bg-red-600/80 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">
+                            <TrashIcon className="w-5 h-5" />
+                            <span>삭제</span>
+                        </button>
+                    </div>
                 </Modal>
             )}
         </>
