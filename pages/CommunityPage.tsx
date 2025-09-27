@@ -126,6 +126,13 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
         const postRef = db.collection('community_posts').doc(postId);
         const commentsRef = postRef.collection('comments');
         
+        const post = posts.find(p => p.id === postId);
+        if (!post) {
+            console.error("Post not found");
+            setIsCommenting(false);
+            return;
+        }
+
         try {
             await db.runTransaction(async (transaction) => {
                  transaction.set(commentsRef.doc(), {
@@ -139,6 +146,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                 transaction.update(postRef, { commentCount: firebase.firestore.FieldValue.increment(1) });
             });
             
+            // Send notification to the post author if someone else commented
+            if (post.authorId !== user.uid) {
+                await db.collection('notifications').add({
+                    userId: post.authorId,
+                    message: `${userProfile.name || '누군가'}님이 회원님의 게시물에 댓글을 남겼습니다.`,
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+
             // Refetch comments to show the new one
             const commentsSnapshot = await commentsRef.orderBy('createdAt', 'asc').get();
             const commentsData = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
