@@ -77,14 +77,8 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
         setResults([]);
 
         try {
-            // FIX: Changed fetch method to POST to match the serverless function and Fatsecret API requirements.
-            const response = await fetch('/api/fatsecret', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ search: searchTerm }),
-            });
+            // FIX: Changed fetch method to GET and pass search term as a query parameter.
+            const response = await fetch(`/api/fatsecret?search=${encodeURIComponent(searchTerm)}`);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -100,7 +94,12 @@ const CalorieSearchPage: React.FC<CalorieSearchPageProps> = ({ onBack, onAddFood
                     setError('검색 결과가 없습니다. 다른 키워드로 시도해보세요.');
                 }
             } else {
-                setError('검색 결과가 없습니다. 다른 키워드로 시도해보세요.');
+                 // Handle cases where the API returns an error object inside a 200 OK response
+                if (data.error) {
+                    setError(data.error.message || '알 수 없는 오류가 발생했습니다.');
+                } else {
+                    setError('검색 결과가 없습니다. 다른 키워드로 시도해보세요.');
+                }
             }
 
         } catch (err) {

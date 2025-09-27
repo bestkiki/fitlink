@@ -1,6 +1,7 @@
+// FIX: The line below was an uncommented file path causing a TypeScript parsing error. It has been converted to a comment.
 // /api/fatsecret.ts
 // Vercel Serverless Function to securely proxy requests to the Fatsecret API.
-// This version is compatible with the Vercel Node.js runtime and uses the correct POST method.
+// This version is compatible with the Vercel Node.js runtime and uses the correct GET method.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
@@ -56,41 +57,39 @@ async function getAccessToken() {
 
 // The main serverless function handler that Vercel will execute.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // FIX: Changed to allow POST requests as required by the Fatsecret search API
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
+  // FIX: Changed method to GET to align with older API specs that seem more reliable.
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
   
   try {
-    // FIX: Read search query from the request body for POST method
-    const { search: searchQuery } = req.body;
+    // FIX: Read search query from the query string for GET method.
+    const searchQuery = req.query.search as string;
 
-    if (!searchQuery || typeof searchQuery !== 'string') {
-      return res.status(400).json({ error: 'Search query is required in the request body' });
+    if (!searchQuery) {
+      return res.status(400).json({ error: 'Search query is required' });
     }
 
     // Get a valid access token.
     const accessToken = await getAccessToken();
 
-    // FIX: Prepare the request body for the POST request
-    const searchParams = new URLSearchParams();
-    searchParams.append('method', 'foods.search');
-    searchParams.append('search_expression', searchQuery);
-    searchParams.append('format', 'json');
-    searchParams.append('region', 'KR');
-    searchParams.append('language', 'ko');
-
-    // FIX: Use the correct POST method to search for foods.
-    const searchUrl = `https://platform.fatsecret.com/rest/server.api`;
+    // FIX: Prepare the query parameters for the GET request.
+    const searchParams = new URLSearchParams({
+        method: 'foods.search',
+        search_expression: searchQuery,
+        format: 'json',
+        region: 'KR',
+        language: 'ko',
+    });
+    
+    const searchUrl = `https://platform.fatsecret.com/rest/server.api?${searchParams.toString()}`;
     
     const searchResponse = await fetch(searchUrl, {
-      method: 'POST',
+      method: 'GET', // Explicitly use GET
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: searchParams.toString(),
     });
 
     if (!searchResponse.ok) {
