@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeftIcon } from '../components/icons';
 import { Article } from './HealthInfoPage'; // Import the updated type
 
@@ -8,6 +8,27 @@ interface HealthInfoDetailProps {
 }
 
 const HealthInfoDetail: React.FC<HealthInfoDetailProps> = ({ article, onBack }) => {
+    useEffect(() => {
+        // Store the original title and meta description
+        const originalTitle = document.title;
+        const metaDescription = document.querySelector('meta[name="description"]');
+        const originalDescription = metaDescription ? metaDescription.getAttribute('content') : '';
+
+        // Update the title and meta description for the current article
+        document.title = `${article.title} | FitLink`;
+        if (metaDescription) {
+            metaDescription.setAttribute('content', article.summary);
+        }
+
+        // Cleanup function to restore original values when the component unmounts
+        return () => {
+            document.title = originalTitle;
+            if (metaDescription && originalDescription) {
+                metaDescription.setAttribute('content', originalDescription);
+            }
+        };
+    }, [article]);
+
     return (
         <div className="container mx-auto px-6 py-12">
             <button onClick={onBack} className="flex items-center space-x-2 text-primary mb-8 hover:underline">
