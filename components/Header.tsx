@@ -9,9 +9,10 @@ interface HeaderProps {
     user: firebase.User | null;
     onNavigate?: (page: Page) => void;
     onLogout?: () => void;
+    onNavigateToHealthInfo?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateToHealthInfo }) => {
   const navigate = onNavigate || (() => {});
 
   const handleLogoClick = () => {
@@ -36,6 +37,7 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout }) => {
           <nav className="hidden md:flex items-center space-x-6">
             <a href="#features" className="text-gray-300 hover:text-primary transition-colors">주요 기능</a>
             <a href="#testimonials" className="text-gray-300 hover:text-primary transition-colors">사용 후기</a>
+            <button onClick={onNavigateToHealthInfo} className="text-gray-300 hover:text-primary transition-colors">건강 정보</button>
             <a href="#cta" className="text-gray-300 hover:text-primary transition-colors">시작하기</a>
           </nav>
         )}
