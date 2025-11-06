@@ -11,6 +11,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TrainerPublicProfile from './pages/TrainerPublicProfile';
+import HealthInfoPage from './pages/HealthInfoPage';
 
 // --- TYPE DEFINITIONS ---
 // These types are used across the application.
@@ -212,7 +213,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<Page | 'terms' | 'privacy'>('landing');
+  const [currentPage, setCurrentPage] = useState<Page | 'terms' | 'privacy' | 'healthInfo'>('landing');
   const [trainerId, setTrainerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -225,7 +226,10 @@ const App: React.FC = () => {
     } else if (parts[0] === 'signup' && parts[1]) {
       setTrainerId(parts[1]);
       setCurrentPage('signup');
+    } else if (parts[0] === 'health-info') {
+      setCurrentPage('healthInfo');
     }
+
 
     const unsubscribe = auth.onAuthStateChanged(async (userAuth) => {
       if (userAuth) {
@@ -262,6 +266,11 @@ const App: React.FC = () => {
     window.history.pushState({}, '', `/${page}`);
     setCurrentPage(page);
   }
+
+  const handleNavigateToHealthInfo = () => {
+    window.history.pushState({}, '', '/health-info');
+    setCurrentPage('healthInfo');
+  };
   
   const handleBackToLanding = () => {
     window.history.pushState({}, '', '/');
@@ -295,6 +304,10 @@ const App: React.FC = () => {
         return <PrivacyPolicy onBack={handleBackToLanding} />;
     }
 
+    if (currentPage === 'healthInfo') {
+        return <HealthInfoPage onBack={handleBackToLanding} />;
+    }
+
     if (user && userProfile) {
       return <AuthenticatedApp user={user} userProfile={userProfile} />;
     }
@@ -309,7 +322,7 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-dark text-white min-h-screen">
-      <Header user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+      <Header user={user} onLogout={handleLogout} onNavigate={handleNavigate} onNavigateToHealthInfo={handleNavigateToHealthInfo} />
       <main>
         {renderContent()}
       </main>
