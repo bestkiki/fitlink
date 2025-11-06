@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftIcon } from '../components/icons';
+import { ArrowLeftIcon, MagnifyingGlassIcon } from '../components/icons';
 import HealthInfoDetail from './HealthInfoDetail';
 
 interface HealthInfoPageProps {
@@ -105,6 +105,7 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
     const [view, setView] = useState<'list' | 'detail'>('list');
     const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleArticleClick = (article: Article) => {
         setSelectedArticle(article);
@@ -116,9 +117,16 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
         setView('list');
     };
     
-    const filteredArticles = selectedCategory === 'all'
-        ? articles
-        : articles.filter(article => article.category === selectedCategory);
+    const filteredArticles = articles
+        .filter(article => selectedCategory === 'all' || article.category === selectedCategory)
+        .filter(article => {
+            if (!searchTerm.trim()) return true;
+            const lowercasedTerm = searchTerm.toLowerCase();
+            return (
+                article.title.toLowerCase().includes(lowercasedTerm) ||
+                article.summary.toLowerCase().includes(lowercasedTerm)
+            );
+        });
 
     if (view === 'detail' && selectedArticle) {
         return <HealthInfoDetail article={selectedArticle} onBack={handleBackToList} />;
@@ -136,7 +144,7 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
                 <p className="text-lg text-gray-400 max-w-2xl mx-auto">운동, 영양, 회복에 대한 유용한 정보들을 확인해보세요.</p>
             </div>
             
-            <div className="flex justify-center flex-wrap gap-3 sm:gap-4 mb-12" role="tablist" aria-label="건강 정보 카테고리">
+            <div className="flex justify-center flex-wrap gap-3 sm:gap-4 mb-8" role="tablist" aria-label="건강 정보 카테고리">
                 {categories.map(category => (
                     <button
                         key={category.id}
@@ -152,6 +160,18 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
                         {category.name}
                     </button>
                 ))}
+            </div>
+            
+            <div className="relative max-w-lg mx-auto mb-12">
+                <input
+                    type="text"
+                    placeholder="궁금한 정보를 검색해보세요... (예: 스쿼트, 단백질)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-dark-accent p-4 pl-12 rounded-full text-white border-2 border-gray-700 focus:border-primary focus:outline-none focus:ring-0 transition-colors"
+                    aria-label="건강 정보 검색"
+                />
+                <MagnifyingGlassIcon className="w-6 h-6 text-gray-500 absolute top-1/2 left-4 transform -translate-y-1/2" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -171,7 +191,8 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
                     ))
                 ) : (
                     <div className="md:col-span-2 text-center text-gray-500 py-20 bg-dark-accent rounded-lg">
-                        <p className="text-lg">해당 카테고리에 맞는 정보가 없습니다.</p>
+                        <p className="text-lg">{searchTerm ? `'${searchTerm}'에 대한 검색 결과가 없습니다.` : '해당 카테고리에 맞는 정보가 없습니다.'}</p>
+                        <p className="mt-2 text-sm">{searchTerm ? '다른 검색어를 시도해보세요.' : '다른 카테고리를 선택해보세요.'}</p>
                     </div>
                 )}
             </div>
