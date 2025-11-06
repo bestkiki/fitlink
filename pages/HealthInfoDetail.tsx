@@ -1,11 +1,6 @@
 import React from 'react';
 import { ArrowLeftIcon } from '../components/icons';
-
-interface Article {
-    title: string;
-    image: string;
-    content: string[];
-}
+import { Article } from './HealthInfoPage'; // Import the updated type
 
 interface HealthInfoDetailProps {
     article: Article;
