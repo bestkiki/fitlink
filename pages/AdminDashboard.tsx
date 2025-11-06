@@ -13,7 +13,7 @@ export interface HealthArticle {
   summary: string;
   image: string;
   category: 'workout' | 'diet' | 'recovery' | 'mindset';
-  content: string[];
+  content: string;
   createdAt: firebase.firestore.Timestamp;
 }
 

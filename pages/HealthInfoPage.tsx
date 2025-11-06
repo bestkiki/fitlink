@@ -16,7 +16,7 @@ export interface Article {
     summary: string;
     image: string;
     category: Category;
-    content: string[];
+    content: string;
     createdAt: firebase.firestore.Timestamp;
 }
 
