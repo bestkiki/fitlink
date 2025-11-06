@@ -3,7 +3,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, ExerciseLog, BodyMeasurement, PersonalExerciseLog, MealType, DietLog, FoodItem, Feedback, Announcement, Banner } from '../App';
-import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon, QuestionMarkCircleIcon, BookOpenIcon } from '../components/icons';
+import { UserCircleIcon, CalendarIcon, ChatBubbleIcon, ChartBarIcon, IdCardIcon, ClipboardListIcon, PlusCircleIcon, PencilIcon, TrashIcon, DocumentTextIcon, FireIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon, UsersIcon, MegaphoneIcon, TrophyIcon, QuestionMarkCircleIcon } from '../components/icons';
 import EditMyProfileModal from '../components/EditMyProfileModal';
 import ProgressChart from '../components/ProgressChart';
 import BookingCalendar from './BookingCalendar';
@@ -16,14 +16,13 @@ import MemberChallengesPage from './MemberChallengesPage';
 import QnAPage from './QnAPage';
 import DietLogHistoryPage from './DietLogHistoryPage';
 import CalorieSearchPage from './CalorieSearchPage';
-import HealthInfoPage from './HealthInfoPage';
 
 interface MemberDashboardProps {
   user: firebase.User;
   userProfile: UserProfile;
 }
 
-type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna' | 'diet_history' | 'calorie_search' | 'healthInfo';
+type MemberDashboardView = 'dashboard' | 'booking' | 'messages' | 'find_trainer' | 'community' | 'challenges' | 'qna' | 'diet_history' | 'calorie_search';
 
 // FIX: Encapsulated all logic within the component function to resolve scope-related errors.
 const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) => {
@@ -390,10 +389,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
   if (currentView === 'qna') {
     return <QnAPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
   }
-  
-  if (currentView === 'healthInfo') {
-    return <HealthInfoPage onBack={handleBackToDashboard} />;
-  }
 
   const sortedMeasurements = [...bodyMeasurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
@@ -517,7 +512,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
 
         {/* Navigation Buttons Section */}
         <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
                  <button onClick={() => setCurrentView('booking')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                     <CalendarIcon className="w-6 h-6 text-secondary" />
                     <span>수업 예약</span>
@@ -537,10 +532,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ user, userProfile }) 
                 <button onClick={() => setCurrentView('qna')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                     <QuestionMarkCircleIcon className="w-6 h-6 text-secondary" />
                     <span>Q&A</span>
-                </button>
-                <button onClick={() => setCurrentView('healthInfo')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
-                    <BookOpenIcon className="w-6 h-6 text-secondary" />
-                    <span>건강 정보</span>
                 </button>
                  {trainerProfile ? (
                      <button onClick={() => setCurrentView('find_trainer')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
