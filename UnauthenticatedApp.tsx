@@ -9,9 +9,10 @@ interface UnauthenticatedAppProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   trainerId?: string | null;
+  onNavigateToHealthInfo: () => void;
 }
 
-const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, onNavigate, trainerId }) => {
+const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, onNavigate, trainerId, onNavigateToHealthInfo }) => {
   const renderPage = () => {
     switch (currentPage) {
       case 'login':
@@ -20,7 +21,7 @@ const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, on
         return <SignupPage onNavigate={onNavigate} trainerId={trainerId} />;
       case 'landing':
       default:
-        return <LandingPage onNavigate={onNavigate} />;
+        return <LandingPage onNavigate={onNavigate} onNavigateToHealthInfo={onNavigateToHealthInfo} />;
     }
   };
 

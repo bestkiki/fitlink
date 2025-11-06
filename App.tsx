@@ -314,10 +314,10 @@ const App: React.FC = () => {
     
     // Check for signup with trainerId again in case user is logged out
     if(parts[0] === 'signup' && parts[1]){
-      return <UnauthenticatedApp currentPage={'signup'} onNavigate={handleNavigate} trainerId={parts[1]}/>;
+      return <UnauthenticatedApp currentPage={'signup'} onNavigate={handleNavigate} trainerId={parts[1]} onNavigateToHealthInfo={handleNavigateToHealthInfo} />;
     }
 
-    return <UnauthenticatedApp currentPage={currentPage} onNavigate={handleNavigate} trainerId={trainerId}/>;
+    return <UnauthenticatedApp currentPage={currentPage} onNavigate={handleNavigate} trainerId={trainerId} onNavigateToHealthInfo={handleNavigateToHealthInfo} />;
   };
 
   return (

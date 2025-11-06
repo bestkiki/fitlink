@@ -51,7 +51,6 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
             </>
           ) : (
             <>
-              <button onClick={onNavigateToHealthInfo} className="text-gray-300 hover:text-primary transition-colors md:hidden">건강 정보</button>
               <button onClick={() => navigate('login')} className="text-gray-300 hover:text-white transition-colors">로그인</button>
               <button onClick={() => navigate('signup')} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors">
                   무료로 시작하기
