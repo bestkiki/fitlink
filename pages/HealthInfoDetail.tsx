@@ -18,6 +18,9 @@ const HealthInfoDetail: React.FC<HealthInfoDetailProps> = ({ article, onBack }) 
             <article className="max-w-3xl mx-auto">
                 <img src={article.image} alt={article.title} className="w-full h-64 md:h-80 object-cover rounded-lg shadow-lg mb-8" />
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-6">{article.title}</h1>
+                
+                <p className="text-xl text-gray-400 mb-8 border-l-4 border-primary pl-4 italic">{article.summary}</p>
+
                 <div
                     className="health-info-content text-gray-300 leading-relaxed text-lg"
                     dangerouslySetInnerHTML={{ __html: article.content }}
