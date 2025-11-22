@@ -267,6 +267,10 @@ const App: React.FC = () => {
       setCurrentPage('healthInfo');
     } else if (parts[0] === 'jobs') {
       setCurrentPage('jobs');
+    } else if (parts[0] === 'community') {
+      setCurrentPage('community');
+    } else if (parts[0] === 'qna') {
+      setCurrentPage('qna');
     }
 
 
@@ -299,6 +303,10 @@ const App: React.FC = () => {
         setTrainerId(null);
     } else if (page === 'jobs') {
         window.history.pushState({}, '', '/jobs');
+    } else if (page === 'community') {
+        window.history.pushState({}, '', '/community');
+    } else if (page === 'qna') {
+        window.history.pushState({}, '', '/qna');
     }
     setCurrentPage(page);
   };

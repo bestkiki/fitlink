@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
@@ -5,18 +6,22 @@ import { UserProfile, Question } from '../App';
 import { ArrowLeftIcon, PlusCircleIcon, QuestionMarkCircleIcon, ChatBubbleBottomCenterTextIcon, ClockIcon } from '../components/icons';
 import AskQuestionModal from '../components/AskQuestionModal';
 import QuestionDetailView from './QuestionDetailView';
+import { Page } from '../UnauthenticatedApp';
 
 interface QnAPageProps {
-    user: firebase.User;
-    userProfile: UserProfile;
+    user?: firebase.User | null;
+    userProfile?: UserProfile | null;
     onBack: () => void;
+    onNavigate?: (page: Page) => void;
 }
 
-const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack }) => {
+const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack, onNavigate }) => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+
+    const isLoggedIn = !!user && !!userProfile;
 
     useEffect(() => {
         setLoading(true);
@@ -35,6 +40,7 @@ const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack }) => {
     }, []);
     
     const handleSaveQuestion = async (data: { title: string, content: string }) => {
+        if (!user || !userProfile) return;
         try {
             await db.collection('qna_posts').add({
                 ...data,
@@ -47,6 +53,14 @@ const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack }) => {
         } catch (error) {
              console.error("Error saving question:", error);
             throw new Error("질문 등록에 실패했습니다.");
+        }
+    };
+    
+    const handleAskClick = () => {
+        if (isLoggedIn) {
+            setIsModalOpen(true);
+        } else {
+            if (onNavigate) onNavigate('login');
         }
     };
     
@@ -72,7 +86,7 @@ const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack }) => {
             <div className="container mx-auto px-6 py-12">
                  <button onClick={onBack} className="flex items-center space-x-2 text-primary mb-6 hover:underline">
                     <ArrowLeftIcon className="w-5 h-5" />
-                    <span>대시보드로 돌아가기</span>
+                    <span>{isLoggedIn ? '대시보드로 돌아가기' : '메인으로 돌아가기'}</span>
                 </button>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
@@ -80,9 +94,9 @@ const QnAPage: React.FC<QnAPageProps> = ({ user, userProfile, onBack }) => {
                         <h1 className="text-3xl font-bold mb-2 flex items-center"><QuestionMarkCircleIcon className="w-8 h-8 mr-3 text-primary"/>질의응답 (Q&A)</h1>
                         <p className="text-gray-400">운동에 대해 궁금한 점을 질문하고 전문가 트레이너의 답변을 받아보세요.</p>
                     </div>
-                     <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-2 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4 sm:mt-0">
-                        <PlusCircleIcon className="w-5 h-5" />
-                        <span>질문하기</span>
+                     <button onClick={handleAskClick} className="flex items-center space-x-2 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4 sm:mt-0">
+                        {isLoggedIn ? <PlusCircleIcon className="w-5 h-5" /> : <span className="mr-1">🔒</span>}
+                        <span>{isLoggedIn ? '질문하기' : '로그인하고 질문하기'}</span>
                     </button>
                 </div>
                 

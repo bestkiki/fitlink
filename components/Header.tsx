@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DumbbellIcon } from './icons';
 import { Page } from '../UnauthenticatedApp';
@@ -35,10 +36,10 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
         </button>
         {!user && (
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="#features" className="text-gray-300 hover:text-primary transition-colors">주요 기능</a>
-            <a href="#testimonials" className="text-gray-300 hover:text-primary transition-colors">사용 후기</a>
+            <a href="#features" onClick={(e) => { e.preventDefault(); navigate('landing'); setTimeout(() => document.getElementById('features')?.scrollIntoView(), 100); }} className="text-gray-300 hover:text-primary transition-colors">주요 기능</a>
+            <button onClick={() => navigate('community')} className="text-gray-300 hover:text-primary transition-colors">커뮤니티</button>
+            <button onClick={() => navigate('qna')} className="text-gray-300 hover:text-primary transition-colors">QnA</button>
             <button onClick={onNavigateToHealthInfo} className="text-gray-300 hover:text-primary transition-colors">건강 정보</button>
-            <a href="#cta" className="text-gray-300 hover:text-primary transition-colors">시작하기</a>
           </nav>
         )}
         <div className="flex items-center space-x-4">

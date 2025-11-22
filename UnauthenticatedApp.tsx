@@ -4,8 +4,10 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import JobBoardPage from './pages/JobBoardPage';
+import CommunityPage from './pages/CommunityPage';
+import QnAPage from './pages/QnAPage';
 
-export type Page = 'landing' | 'login' | 'signup' | 'jobs';
+export type Page = 'landing' | 'login' | 'signup' | 'jobs' | 'community' | 'qna';
 
 interface UnauthenticatedAppProps {
   currentPage: Page;
@@ -26,6 +28,24 @@ const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, on
             <JobBoardPage 
                 onBack={() => onNavigate('landing')} 
                 onNavigate={onNavigate}
+            />
+        );
+      case 'community':
+        return (
+            <CommunityPage 
+                onBack={() => onNavigate('landing')} 
+                onNavigate={onNavigate}
+                user={null}
+                userProfile={null}
+            />
+        );
+      case 'qna':
+        return (
+            <QnAPage 
+                onBack={() => onNavigate('landing')} 
+                onNavigate={onNavigate}
+                user={null}
+                userProfile={null}
             />
         );
       case 'landing':

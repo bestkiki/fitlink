@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
@@ -6,8 +7,8 @@ import { ArrowLeftIcon, UserCircleIcon, TrashIcon } from '../components/icons';
 
 interface QuestionDetailViewProps {
     question: Question;
-    user: firebase.User;
-    userProfile: UserProfile;
+    user?: firebase.User | null;
+    userProfile?: UserProfile | null;
     onBack: () => void;
 }
 
@@ -16,6 +17,8 @@ const QuestionDetailView: React.FC<QuestionDetailViewProps> = ({ question, user,
     const [loading, setLoading] = useState(true);
     const [newAnswer, setNewAnswer] = useState('');
     const [isAnswering, setIsAnswering] = useState(false);
+
+    const isLoggedIn = !!user && !!userProfile;
 
     useEffect(() => {
         setLoading(true);
@@ -35,6 +38,7 @@ const QuestionDetailView: React.FC<QuestionDetailViewProps> = ({ question, user,
 
     const handleAnswerSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isLoggedIn || !user || !userProfile) return;
         if (!newAnswer.trim() || isAnswering) return;
 
         setIsAnswering(true);
@@ -129,7 +133,7 @@ const QuestionDetailView: React.FC<QuestionDetailViewProps> = ({ question, user,
                                         <span className="text-xs font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full ml-2">트레이너</span>
                                         <p className="text-xs text-gray-500 mt-0.5">{timeSince(answer.createdAt)}</p>
                                     </div>
-                                    {answer.authorId === user.uid && (
+                                    {isLoggedIn && answer.authorId === user?.uid && (
                                          <button onClick={() => handleDeleteAnswer(answer.id)} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-full">
                                             <TrashIcon className="w-5 h-5"/>
                                         </button>
@@ -142,7 +146,7 @@ const QuestionDetailView: React.FC<QuestionDetailViewProps> = ({ question, user,
                 </div>
 
                 {/* Answer Form (for trainers only) */}
-                {userProfile.role === 'trainer' && (
+                {isLoggedIn && userProfile?.role === 'trainer' && (
                     <div className="mt-12 pt-8 border-t border-gray-700">
                          <h2 className="text-xl font-bold text-white mb-4">답변 작성하기</h2>
                          <form onSubmit={handleAnswerSubmit} className="bg-dark-accent p-5 rounded-lg flex items-start space-x-4">

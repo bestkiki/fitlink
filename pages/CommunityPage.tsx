@@ -1,16 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db } from '../firebase';
 import { UserProfile, Post, Comment } from '../App';
 import { ArrowLeftIcon, UserCircleIcon, TrashIcon, HeartIcon, ChatBubbleBottomCenterTextIcon } from '../components/icons';
+import { Page } from '../UnauthenticatedApp';
 
 interface CommunityPageProps {
-    user: firebase.User;
-    userProfile: UserProfile;
+    user?: firebase.User | null;
+    userProfile?: UserProfile | null;
     onBack: () => void;
+    onNavigate?: (page: Page) => void;
 }
 
-const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack }) => {
+const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack, onNavigate }) => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [newPostContent, setNewPostContent] = useState('');
     const [loading, setLoading] = useState(true);
@@ -20,6 +23,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
     const [newComment, setNewComment] = useState('');
     const [isCommenting, setIsCommenting] = useState(false);
 
+    const isLoggedIn = !!user && !!userProfile;
 
     useEffect(() => {
         setLoading(true);
@@ -39,6 +43,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
 
     const handleCreatePost = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isLoggedIn || !user || !userProfile) return;
         if (!newPostContent.trim() || isPosting) return;
 
         setIsPosting(true);
@@ -74,6 +79,13 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
     }
     
     const handleToggleLike = async (postId: string) => {
+        if (!isLoggedIn || !user) {
+            if (confirm('로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?')) {
+                if (onNavigate) onNavigate('login');
+            }
+            return;
+        }
+
         const postRef = db.collection('community_posts').doc(postId);
         const post = posts.find(p => p.id === postId);
         if (!post) return;
@@ -120,6 +132,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
     
     const handleCreateComment = async (e: React.FormEvent, postId: string) => {
         e.preventDefault();
+        if (!isLoggedIn || !user || !userProfile) {
+             if (confirm('로그인이 필요한 기능입니다. 로그인 페이지로 이동하시겠습니까?')) {
+                if (onNavigate) onNavigate('login');
+            }
+            return;
+        }
         if (!newComment.trim() || isCommenting) return;
         
         setIsCommenting(true);
@@ -216,11 +234,15 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
         return Math.floor(seconds) + "초 전";
     };
 
+    const handleLoginClick = () => {
+        if (onNavigate) onNavigate('login');
+    }
+
     return (
         <div className="container mx-auto px-6 py-12">
             <button onClick={onBack} className="flex items-center space-x-2 text-primary mb-6 hover:underline">
                 <ArrowLeftIcon className="w-5 h-5" />
-                <span>대시보드로 돌아가기</span>
+                <span>{isLoggedIn ? '대시보드로 돌아가기' : '메인으로 돌아가기'}</span>
             </button>
 
             <h1 className="text-3xl font-bold mb-2">커뮤니티</h1>
@@ -229,27 +251,39 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
             <div className="max-w-2xl mx-auto">
                 {/* Create Post Form */}
                 <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
-                    <form onSubmit={handleCreatePost} className="flex items-start space-x-4">
-                        {userProfile.profileImageUrl ? (
-                            <img src={userProfile.profileImageUrl} alt="My Profile" className="w-10 h-10 rounded-full object-cover"/>
-                        ) : (
-                             <UserCircleIcon className="w-10 h-10 text-gray-500"/>
-                        )}
-                        <div className="flex-grow">
-                            <textarea
-                                value={newPostContent}
-                                onChange={(e) => setNewPostContent(e.target.value)}
-                                placeholder={`${userProfile.name || '회원'}님의 소식을 공유해보세요...`}
-                                className="w-full bg-dark p-3 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary placeholder-gray-500 resize-none"
-                                rows={3}
-                            />
-                            <div className="text-right mt-2">
-                                <button type="submit" disabled={!newPostContent.trim() || isPosting} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed">
-                                    {isPosting ? '게시 중...' : '게시하기'}
-                                </button>
+                    {isLoggedIn && userProfile ? (
+                        <form onSubmit={handleCreatePost} className="flex items-start space-x-4">
+                            {userProfile.profileImageUrl ? (
+                                <img src={userProfile.profileImageUrl} alt="My Profile" className="w-10 h-10 rounded-full object-cover"/>
+                            ) : (
+                                 <UserCircleIcon className="w-10 h-10 text-gray-500"/>
+                            )}
+                            <div className="flex-grow">
+                                <textarea
+                                    value={newPostContent}
+                                    onChange={(e) => setNewPostContent(e.target.value)}
+                                    placeholder={`${userProfile.name || '회원'}님의 소식을 공유해보세요...`}
+                                    className="w-full bg-dark p-3 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary placeholder-gray-500 resize-none"
+                                    rows={3}
+                                />
+                                <div className="text-right mt-2">
+                                    <button type="submit" disabled={!newPostContent.trim() || isPosting} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed">
+                                        {isPosting ? '게시 중...' : '게시하기'}
+                                    </button>
+                                </div>
                             </div>
+                        </form>
+                    ) : (
+                        <div className="flex items-center justify-between p-2">
+                            <div className="flex items-center space-x-4">
+                                <UserCircleIcon className="w-10 h-10 text-gray-500"/>
+                                <span className="text-gray-400">로그인하고 회원님들의 이야기를 들어보세요!</span>
+                            </div>
+                            <button onClick={handleLoginClick} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">
+                                로그인하기
+                            </button>
                         </div>
-                    </form>
+                    )}
                 </div>
 
                 {/* Posts Feed */}
@@ -278,7 +312,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                                         <p className="text-xs text-gray-500">{timeSince(post.createdAt)}</p>
                                     </div>
                                 </div>
-                                {post.authorId === user.uid && (
+                                {isLoggedIn && post.authorId === user?.uid && (
                                      <button onClick={() => handleDeletePost(post.id)} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-full">
                                         <TrashIcon className="w-5 h-5"/>
                                     </button>
@@ -286,8 +320,8 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                             </div>
                             <p className="text-gray-300 my-4 whitespace-pre-wrap">{post.content}</p>
                             <div className="flex items-center space-x-6 text-gray-400 border-t border-gray-700/50 pt-3">
-                                <button onClick={() => handleToggleLike(post.id)} className={`flex items-center space-x-2 transition-colors ${post.likes.includes(user.uid) ? 'text-red-500' : 'hover:text-red-500'}`}>
-                                    <HeartIcon className={`w-5 h-5 ${post.likes.includes(user.uid) ? 'fill-current' : ''}`}/>
+                                <button onClick={() => handleToggleLike(post.id)} className={`flex items-center space-x-2 transition-colors ${user && post.likes.includes(user.uid) ? 'text-red-500' : 'hover:text-red-500'}`}>
+                                    <HeartIcon className={`w-5 h-5 ${user && post.likes.includes(user.uid) ? 'fill-current' : ''}`}/>
                                     <span className="text-sm font-medium">{post.likes.length}</span>
                                 </button>
                                 <button onClick={() => handleToggleComments(post.id)} className="flex items-center space-x-2 hover:text-primary transition-colors">
@@ -312,7 +346,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                                                         <span className="font-semibold text-white text-sm">{comment.authorName}</span>
                                                         <span className="text-xs text-gray-500 ml-2">{timeSince(comment.createdAt)}</span>
                                                     </div>
-                                                    {comment.authorId === user.uid && (
+                                                    {isLoggedIn && comment.authorId === user?.uid && (
                                                         <button onClick={() => handleDeleteComment(post.id, comment.id)} className="p-1 text-gray-500 hover:text-red-400">
                                                             <TrashIcon className="w-4 h-4"/>
                                                         </button>
@@ -323,25 +357,31 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                                         </div>
                                     ))}
                                      {/* New Comment Form */}
-                                     <form onSubmit={(e) => handleCreateComment(e, post.id)} className="flex items-start space-x-3 pt-2">
-                                         {userProfile.profileImageUrl ? (
-                                            <img src={userProfile.profileImageUrl} alt="My Profile" className="w-8 h-8 rounded-full object-cover"/>
-                                        ) : (
-                                            <UserCircleIcon className="w-8 h-8 text-gray-500"/>
-                                        )}
-                                        <div className="flex-grow flex items-center space-x-2">
-                                            <input
-                                                type="text"
-                                                value={newComment}
-                                                onChange={(e) => setNewComment(e.target.value)}
-                                                placeholder="댓글을 입력하세요..."
-                                                className="w-full bg-dark text-sm p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
-                                            />
-                                            <button type="submit" disabled={!newComment.trim() || isCommenting} className="bg-primary text-white text-sm px-3 py-2 rounded-md hover:bg-primary-dark disabled:opacity-50">
-                                                게시
-                                            </button>
-                                        </div>
-                                     </form>
+                                     {isLoggedIn && userProfile ? (
+                                         <form onSubmit={(e) => handleCreateComment(e, post.id)} className="flex items-start space-x-3 pt-2">
+                                             {userProfile.profileImageUrl ? (
+                                                <img src={userProfile.profileImageUrl} alt="My Profile" className="w-8 h-8 rounded-full object-cover"/>
+                                            ) : (
+                                                <UserCircleIcon className="w-8 h-8 text-gray-500"/>
+                                            )}
+                                            <div className="flex-grow flex items-center space-x-2">
+                                                <input
+                                                    type="text"
+                                                    value={newComment}
+                                                    onChange={(e) => setNewComment(e.target.value)}
+                                                    placeholder="댓글을 입력하세요..."
+                                                    className="w-full bg-dark text-sm p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
+                                                />
+                                                <button type="submit" disabled={!newComment.trim() || isCommenting} className="bg-primary text-white text-sm px-3 py-2 rounded-md hover:bg-primary-dark disabled:opacity-50">
+                                                    게시
+                                                </button>
+                                            </div>
+                                         </form>
+                                     ) : (
+                                         <div className="text-center py-2">
+                                             <button onClick={handleLoginClick} className="text-primary text-sm hover:underline">댓글을 작성하려면 로그인하세요.</button>
+                                         </div>
+                                     )}
                                 </div>
                             )}
                         </div>
