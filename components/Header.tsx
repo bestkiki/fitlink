@@ -83,38 +83,38 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
 
       {/* Mobile Menu Overlay */}
       {!user && isMobileMenuOpen && (
-        <div className="fixed inset-0 top-[72px] bg-dark-accent/95 backdrop-blur-md z-40 flex flex-col p-6 space-y-6 md:hidden overflow-y-auto animate-fade-in">
-            <nav className="flex flex-col space-y-4">
+        <div className="fixed inset-x-0 top-[72px] bottom-0 bg-dark-accent/95 backdrop-blur-md z-40 flex flex-col p-6 md:hidden overflow-y-auto animate-fade-in">
+            <nav className="flex flex-col space-y-2">
                 <a 
                     href="#features" 
                     onClick={(e) => { e.preventDefault(); closeMenu(); navigate('landing'); setTimeout(() => document.getElementById('features')?.scrollIntoView(), 100); }} 
-                    className="text-xl font-medium text-gray-200 hover:text-primary py-2 border-b border-gray-700"
+                    className="text-lg font-medium text-gray-200 hover:text-primary py-3 border-b border-gray-700"
                 >
                     주요 기능
                 </a>
                 <button 
                     onClick={() => { closeMenu(); navigate('community'); }} 
-                    className="text-xl font-medium text-gray-200 hover:text-primary py-2 text-left border-b border-gray-700"
+                    className="text-lg font-medium text-gray-200 hover:text-primary py-3 text-left border-b border-gray-700"
                 >
                     커뮤니티
                 </button>
                 <button 
                     onClick={() => { closeMenu(); navigate('qna'); }} 
-                    className="text-xl font-medium text-gray-200 hover:text-primary py-2 text-left border-b border-gray-700"
+                    className="text-lg font-medium text-gray-200 hover:text-primary py-3 text-left border-b border-gray-700"
                 >
                     QnA
                 </button>
                 <button 
                     onClick={() => { closeMenu(); onNavigateToHealthInfo?.(); }} 
-                    className="text-xl font-medium text-gray-200 hover:text-primary py-2 text-left border-b border-gray-700"
+                    className="text-lg font-medium text-gray-200 hover:text-primary py-3 text-left border-b border-gray-700"
                 >
                     건강 정보
                 </button>
             </nav>
-            <div className="flex flex-col space-y-4 mt-auto pt-4">
+            <div className="flex flex-col space-y-3 mt-6 pb-20">
                 <button 
                     onClick={() => { closeMenu(); navigate('login'); }} 
-                    className="text-lg font-medium text-gray-300 hover:text-white py-2 text-center"
+                    className="text-lg font-medium text-gray-300 hover:text-white py-2 text-center border border-gray-600 rounded-lg"
                 >
                     로그인
                 </button>
