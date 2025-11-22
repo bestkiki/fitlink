@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
 import { UserProfile, ConsultationRequest, Announcement, Banner } from '../App';
-import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon, QuestionMarkCircleIcon, BookOpenIcon } from '../components/icons';
+import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon, QuestionMarkCircleIcon, BookOpenIcon, BriefcaseIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -16,6 +17,7 @@ import CommunityPage from './CommunityPage';
 import ChallengeManagerPage from './ChallengeManagerPage';
 import QnAPage from './QnAPage';
 import HealthInfoPage from './HealthInfoPage';
+import JobBoardPage from './JobBoardPage';
 
 export interface Member extends UserProfile {
     id: string;
@@ -26,7 +28,7 @@ interface TrainerDashboardProps {
   userProfile: UserProfile;
 }
 
-type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges' | 'qna' | 'healthInfo';
+type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges' | 'qna' | 'healthInfo' | 'jobBoard';
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
@@ -280,6 +282,8 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 return <QnAPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
             case 'healthInfo':
                 return <HealthInfoPage onBack={handleBackToDashboard} />;
+            case 'jobBoard':
+                return <JobBoardPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
             default:
                 const nextBanner = (e: React.MouseEvent) => {
                     e.stopPropagation();
@@ -410,7 +414,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                         </div>
 
                         <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
                                 <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                     <ShareIcon className="w-6 h-6 text-primary" />
                                     <span>초대/공유</span>
@@ -434,6 +438,10 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                 <button onClick={() => setCurrentView('healthInfo')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                     <BookOpenIcon className="w-6 h-6 text-primary" />
                                     <span>건강 정보</span>
+                                </button>
+                                <button onClick={() => setCurrentView('jobBoard')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                    <BriefcaseIcon className="w-6 h-6 text-primary" />
+                                    <span>구인구직</span>
                                 </button>
                             </div>
                         </div>

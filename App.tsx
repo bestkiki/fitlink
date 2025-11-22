@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 // FIX: Using compat imports for firebase v8 APIs
 import firebase from 'firebase/compat/app';
@@ -206,6 +207,24 @@ export interface Question {
     authorName: string;
     createdAt: firebase.firestore.Timestamp;
     answerCount: number;
+}
+
+export interface JobPost {
+    id: string;
+    authorId: string;
+    authorName: string;
+    authorProfileImageUrl?: string;
+    gymName: string;
+    intro: string;
+    recruitSection: string;
+    location: string;
+    workHours: string;
+    conditions: string;
+    salary: string;
+    idealCandidate: string;
+    qualifications: string;
+    applicationMethod: string;
+    createdAt: firebase.firestore.Timestamp;
 }
 
 

@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
 import { UserProfile, Banner } from '../App';
-import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon, BookOpenIcon } from '../components/icons';
+import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon, BookOpenIcon, BriefcaseIcon } from '../components/icons';
 import AddEditBannerModal from '../components/AddEditBannerModal';
 import AddEditHealthArticleModal from '../components/AddEditHealthArticleModal';
+import JobBoardPage from './JobBoardPage';
 
 export interface HealthArticle {
   id: string;
@@ -22,7 +24,7 @@ interface AdminDashboardProps {
   userProfile: UserProfile;
 }
 
-type AdminView = 'banners' | 'healthInfo';
+type AdminView = 'banners' | 'healthInfo' | 'jobBoard';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) => {
     const [banners, setBanners] = useState<Banner[]>([]);
@@ -153,7 +155,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    {/* ... table content from before ... */}
+                    <thead>
+                        <tr className="border-b border-gray-700">
+                            <th className="p-3 text-sm font-semibold text-gray-400">미리보기</th>
+                            <th className="p-3 text-sm font-semibold text-gray-400">제목</th>
+                            <th className="p-3 text-sm font-semibold text-gray-400">노출 대상</th>
+                            <th className="p-3 text-sm font-semibold text-gray-400">상태</th>
+                            <th className="p-3 text-sm font-semibold text-gray-400 text-right">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loadingBanners ? (
+                            <tr><td colSpan={5} className="text-center p-8 text-gray-500">배너 목록을 불러오는 중...</td></tr>
+                        ) : banners.length > 0 ? (
+                            banners.map(banner => (
+                                <tr key={banner.id} className="border-b border-gray-800 hover:bg-dark">
+                                    <td className="p-3">
+                                        <img src={banner.imageUrl} alt={banner.title} className="w-24 h-12 object-cover rounded-md bg-dark" />
+                                    </td>
+                                    <td className="p-3 font-medium text-white">{banner.title}</td>
+                                    <td className="p-3 text-gray-400 capitalize">{banner.targetAudience}</td>
+                                    <td className="p-3">
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                            banner.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-600/50 text-gray-400'
+                                        }`}>
+                                            {banner.isActive ? '활성' : '비활성'}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-right">
+                                        <button onClick={() => handleOpenBannerModal(banner)} className="text-gray-400 hover:text-primary mr-2 p-1" title="수정"><PencilIcon className="w-5 h-5"/></button>
+                                        <button onClick={() => handleDeleteBanner(banner)} className="text-gray-400 hover:text-red-400 p-1" title="삭제"><TrashIcon className="w-5 h-5"/></button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr><td colSpan={5} className="text-center p-8 text-gray-500">등록된 배너가 없습니다.</td></tr>
+                        )}
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -207,6 +245,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             </div>
         </div>
     );
+    
+    if (currentView === 'jobBoard') {
+        return <JobBoardPage user={user} userProfile={userProfile} onBack={() => setCurrentView('banners')} />;
+    }
 
 
   return (
@@ -236,66 +278,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
                     >
                         건강 정보 관리
                     </button>
+                    <button
+                        onClick={() => setCurrentView('jobBoard')}
+                        className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${currentView === 'jobBoard' ? 'border-b-2 border-primary text-primary bg-dark-accent' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        구인구직 관리
+                    </button>
                 </nav>
             </div>
             
             {currentView === 'banners' ? (
-                 <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-white flex items-center">
-                            <PhotoIcon className="w-7 h-7 mr-3 text-primary" />
-                            광고 배너 관리
-                        </h2>
-                         <button 
-                            onClick={() => handleOpenBannerModal(null)}
-                            className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-2 px-3 rounded-lg transition-colors text-sm"
-                        >
-                            <PlusCircleIcon className="w-5 h-5" />
-                            <span>새 배너</span>
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="border-b border-gray-700">
-                                    <th className="p-3 text-sm font-semibold text-gray-400">미리보기</th>
-                                    <th className="p-3 text-sm font-semibold text-gray-400">제목</th>
-                                    <th className="p-3 text-sm font-semibold text-gray-400">노출 대상</th>
-                                    <th className="p-3 text-sm font-semibold text-gray-400">상태</th>
-                                    <th className="p-3 text-sm font-semibold text-gray-400 text-right">관리</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loadingBanners ? (
-                                    <tr><td colSpan={5} className="text-center p-8 text-gray-500">배너 목록을 불러오는 중...</td></tr>
-                                ) : banners.length > 0 ? (
-                                    banners.map(banner => (
-                                        <tr key={banner.id} className="border-b border-gray-800 hover:bg-dark">
-                                            <td className="p-3">
-                                                <img src={banner.imageUrl} alt={banner.title} className="w-24 h-12 object-cover rounded-md bg-dark" />
-                                            </td>
-                                            <td className="p-3 font-medium text-white">{banner.title}</td>
-                                            <td className="p-3 text-gray-400 capitalize">{banner.targetAudience}</td>
-                                            <td className="p-3">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                    banner.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-600/50 text-gray-400'
-                                                }`}>
-                                                    {banner.isActive ? '활성' : '비활성'}
-                                                </span>
-                                            </td>
-                                            <td className="p-3 text-right">
-                                                <button onClick={() => handleOpenBannerModal(banner)} className="text-gray-400 hover:text-primary mr-2 p-1" title="수정"><PencilIcon className="w-5 h-5"/></button>
-                                                <button onClick={() => handleDeleteBanner(banner)} className="text-gray-400 hover:text-red-400 p-1" title="삭제"><TrashIcon className="w-5 h-5"/></button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr><td colSpan={5} className="text-center p-8 text-gray-500">등록된 배너가 없습니다.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                 renderBanners()
             ) : (
                 renderHealthInfo()
             )}
