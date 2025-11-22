@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
@@ -5,6 +6,7 @@ import Testimonials from '../components/Testimonials';
 import CTA from '../components/CTA';
 import { Page } from '../UnauthenticatedApp';
 import HealthInfoPromo from '../components/HealthInfoPromo';
+import JobBoardPreview from '../components/JobBoardPreview';
 
 interface LandingPageProps {
   onNavigate: (page: Page) => void;
@@ -16,6 +18,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onNavigateToHealt
     <>
       <Hero onNavigate={() => onNavigate('signup')} />
       <Features />
+      <JobBoardPreview onNavigate={onNavigate} />
       <HealthInfoPromo onNavigate={onNavigateToHealthInfo} />
       <Testimonials />
       <CTA onNavigate={() => onNavigate('signup')} />
