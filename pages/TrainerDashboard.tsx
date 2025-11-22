@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db, storage } from '../firebase';
-import { UserProfile, ConsultationRequest, Announcement, Banner } from '../App';
+import { UserProfile, ConsultationRequest, Announcement, Banner, HealthArticle } from '../App';
 import { UserCircleIcon, UsersIcon, CalendarIcon, PlusCircleIcon, PencilIcon, ShareIcon, EnvelopeIcon, DocumentTextIcon, ChatBubbleBottomCenterTextIcon, ArrowTopRightOnSquareIcon, InboxArrowDownIcon, TrashIcon, MegaphoneIcon, ChatBubbleLeftRightIcon, TrophyIcon, QuestionMarkCircleIcon, BookOpenIcon, BriefcaseIcon } from '../components/icons';
 import EditTrainerProfileModal from '../components/EditTrainerProfileModal';
 import AddEditMemberModal from '../components/AddEditMemberModal';
@@ -18,6 +18,7 @@ import ChallengeManagerPage from './ChallengeManagerPage';
 import QnAPage from './QnAPage';
 import HealthInfoPage from './HealthInfoPage';
 import JobBoardPage from './JobBoardPage';
+import AddEditHealthArticleModal from '../components/AddEditHealthArticleModal';
 
 export interface Member extends UserProfile {
     id: string;
@@ -28,7 +29,7 @@ interface TrainerDashboardProps {
   userProfile: UserProfile;
 }
 
-type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges' | 'qna' | 'healthInfo' | 'jobBoard';
+type TrainerView = 'dashboard' | 'memberDetail' | 'schedule' | 'community' | 'challenges' | 'qna' | 'healthInfo' | 'jobBoard' | 'manageHealthInfo';
 
 const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }) => {
     const [profile, setProfile] = useState(userProfile);
@@ -53,6 +54,11 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
     const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
     const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
     const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+
+    // Health Info Management
+    const [myArticles, setMyArticles] = useState<HealthArticle[]>([]);
+    const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
+    const [editingArticle, setEditingArticle] = useState<HealthArticle | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -117,6 +123,20 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
             return () => clearTimeout(timer);
         }
     }, [currentBanner, banners.length]);
+
+    // Fetch My Articles for ManageHealthInfo View
+    useEffect(() => {
+        if (currentView === 'manageHealthInfo') {
+            const unsubscribeArticles = db.collection('health_articles')
+                .where('authorId', '==', user.uid)
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthArticle));
+                    setMyArticles(data);
+                });
+            return () => unsubscribeArticles();
+        }
+    }, [currentView, user.uid]);
     
     const handleSaveProfile = async (
         profileData: Partial<UserProfile>, 
@@ -244,6 +264,35 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
         }
     };
 
+    const handleOpenArticleModal = (article: HealthArticle | null) => {
+        setEditingArticle(article);
+        setIsArticleModalOpen(true);
+    };
+
+    const handleSaveArticle = async (articleData: Omit<HealthArticle, 'id' | 'createdAt'>) => {
+        try {
+            if (editingArticle) {
+                await db.collection('health_articles').doc(editingArticle.id).update(articleData);
+            } else {
+                await db.collection('health_articles').add({
+                    ...articleData,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+            setIsArticleModalOpen(false);
+            setEditingArticle(null);
+        } catch (err: any) {
+            console.error("Error saving article:", err);
+            throw new Error('게시글 저장에 실패했습니다.');
+        }
+    };
+
+    const handleDeleteArticle = async (articleId: string) => {
+        if(window.confirm('정말로 삭제하시겠습니까?')) {
+            await db.collection('health_articles').doc(articleId).delete();
+        }
+    };
+
 
     const handleSelectMember = (member: Member) => {
         setSelectedMember(member);
@@ -284,6 +333,75 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                 return <HealthInfoPage onBack={handleBackToDashboard} />;
             case 'jobBoard':
                 return <JobBoardPage user={user} userProfile={profile} onBack={handleBackToDashboard} />;
+            case 'manageHealthInfo':
+                return (
+                    <div className="container mx-auto px-6 py-12">
+                        <button onClick={handleBackToDashboard} className="flex items-center space-x-2 text-primary mb-6 hover:underline">
+                            <ArrowTopRightOnSquareIcon className="w-5 h-5 transform rotate-180" />
+                            <span>대시보드로 돌아가기</span>
+                        </button>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+                            <div>
+                                <h1 className="text-3xl font-bold mb-2 flex items-center"><BookOpenIcon className="w-8 h-8 mr-3 text-primary"/>내 건강 정보 기고 관리</h1>
+                                <p className="text-gray-400">회원들에게 유용한 건강 정보를 공유하고 자신을 홍보하세요. 작성한 글은 관리자 승인 후 게시됩니다.</p>
+                            </div>
+                            <button onClick={() => handleOpenArticleModal(null)} className="flex items-center space-x-2 bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors mt-4 sm:mt-0">
+                                <PlusCircleIcon className="w-5 h-5" />
+                                <span>새 글 작성</span>
+                            </button>
+                        </div>
+                        
+                        <div className="bg-dark-accent rounded-lg shadow-lg overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-dark">
+                                    <tr>
+                                        <th className="p-4 text-sm font-semibold text-gray-400">제목</th>
+                                        <th className="p-4 text-sm font-semibold text-gray-400">상태</th>
+                                        <th className="p-4 text-sm font-semibold text-gray-400">작성일</th>
+                                        <th className="p-4 text-sm font-semibold text-gray-400 text-right">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {myArticles.length > 0 ? (
+                                        myArticles.map(article => (
+                                            <tr key={article.id} className="border-t border-gray-700 hover:bg-dark/50">
+                                                <td className="p-4 font-medium text-white">
+                                                    {article.title}
+                                                    {article.rejectionReason && (
+                                                        <p className="text-xs text-red-400 mt-1">반려 사유: {article.rejectionReason}</p>
+                                                    )}
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                        article.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                                                        article.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-yellow-500/20 text-yellow-400'
+                                                    }`}>
+                                                        {article.status === 'approved' ? '게시됨' : 
+                                                         article.status === 'rejected' ? '반려됨' : '승인 대기'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-gray-400 text-sm">{article.createdAt?.toDate().toLocaleDateString()}</td>
+                                                <td className="p-4 text-right">
+                                                    {article.status !== 'approved' && (
+                                                        <button onClick={() => handleOpenArticleModal(article)} className="text-gray-400 hover:text-primary p-2 mr-2">
+                                                            <PencilIcon className="w-5 h-5"/>
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => handleDeleteArticle(article.id)} className="text-gray-400 hover:text-red-400 p-2">
+                                                        <TrashIcon className="w-5 h-5"/>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={4} className="p-8 text-center text-gray-500">작성한 글이 없습니다.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
             default:
                 const nextBanner = (e: React.MouseEvent) => {
                     e.stopPropagation();
@@ -414,7 +532,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                         </div>
 
                         <div className="bg-dark-accent p-4 rounded-lg shadow-lg mb-8">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
                                 <button onClick={() => setIsShareModalOpen(true)} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                     <ShareIcon className="w-6 h-6 text-primary" />
                                     <span>초대/공유</span>
@@ -435,7 +553,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                     <QuestionMarkCircleIcon className="w-6 h-6 text-primary" />
                                     <span>Q&A</span>
                                 </button>
-                                <button onClick={() => setCurrentView('healthInfo')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
+                                <button onClick={() => setCurrentView('manageHealthInfo')} className="w-full bg-dark hover:bg-dark/70 text-gray-200 font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-3">
                                     <BookOpenIcon className="w-6 h-6 text-primary" />
                                     <span>건강 정보</span>
                                 </button>
@@ -558,6 +676,14 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                             member={editingMember}
                         />
                     )}
+                    <AddEditHealthArticleModal
+                        isOpen={isArticleModalOpen}
+                        onClose={() => { setIsArticleModalOpen(false); setEditingArticle(null); }}
+                        onSave={handleSaveArticle}
+                        article={editingArticle}
+                        userProfile={profile}
+                        user={user}
+                    />
                 </>
             )}
         </div>

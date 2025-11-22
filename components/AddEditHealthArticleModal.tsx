@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
-import { HealthArticle } from '../pages/AdminDashboard';
+import { HealthArticle, UserProfile } from '../App';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 
@@ -9,6 +10,8 @@ interface AddEditHealthArticleModalProps {
     onClose: () => void;
     onSave: (articleData: Omit<HealthArticle, 'id' | 'createdAt'>) => Promise<void>;
     article: HealthArticle | null;
+    userProfile: UserProfile;
+    user: firebase.User;
 }
 
 const categories = [
@@ -32,7 +35,7 @@ const EditorToolbar: React.FC<{ onCommand: (command: string, value?: string) => 
 };
 
 
-const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ isOpen, onClose, onSave, article }) => {
+const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ isOpen, onClose, onSave, article, userProfile, user }) => {
     const [title, setTitle] = useState('');
     const [summary, setSummary] = useState('');
     const [image, setImage] = useState('');
@@ -76,14 +79,31 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
     };
 
     const handleSave = async () => {
-        if (!title.trim() || !summary.trim() || !image.trim() || !content.trim()) {
-            setError('모든 필드는 필수 항목입니다.');
+        if (!title.trim()) {
+            setError('제목을 입력해주세요.');
+            return;
+        }
+        if (!summary.trim()) {
+            setError('요약을 입력해주세요.');
+            return;
+        }
+        if (!image.trim()) {
+            setError('이미지 URL을 입력해주세요.');
+            return;
+        }
+        if (!content.trim()) {
+            setError('본문을 입력해주세요.');
             return;
         }
 
         setIsSaving(true);
         setError('');
         
+        const isAdmin = userProfile.isAdmin;
+        const role = isAdmin ? 'admin' : 'trainer';
+        // Admins publish immediately, trainers need approval
+        const status = article ? article.status : (isAdmin ? 'approved' : 'pending'); 
+
         try {
             await onSave({
                 title,
@@ -91,6 +111,11 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                 image,
                 category,
                 content,
+                authorId: article?.authorId || user.uid,
+                authorName: article?.authorName || userProfile.name || user.email || 'Unknown',
+                authorProfileImageUrl: article?.authorProfileImageUrl || userProfile.profileImageUrl || undefined,
+                authorRole: article?.authorRole || role,
+                status: status,
             });
         } catch (e: any) {
             setError(e.message || '저장에 실패했습니다.');
@@ -110,6 +135,13 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
             `}</style>
             <div className="space-y-4">
                 {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-md">{error}</p>}
+                {!userProfile.isAdmin && !article && (
+                    <div className="bg-blue-500/10 border border-blue-500/50 rounded-md p-3">
+                        <p className="text-blue-400 text-sm">
+                            작성하신 글은 관리자의 승인 후 게시됩니다. 좋은 정보로 회원들에게 어필해보세요!
+                        </p>
+                    </div>
+                )}
                 
                 <div>
                     <label htmlFor="article-title" className="block text-sm font-medium text-gray-300 mb-1">
@@ -134,6 +166,7 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                         value={summary}
                         onChange={(e) => setSummary(e.target.value)}
                         className="w-full bg-dark p-2 rounded-md text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="리스트에 표시될 짧은 설명입니다."
                     ></textarea>
                 </div>
                 
@@ -179,8 +212,7 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                             contentEditable={true}
                             onInput={handleContentChange}
                             className="w-full bg-dark p-3 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-primary rounded-b-md editor-placeholder"
-                            // FIX: Replaced the invalid 'placeholder' attribute with a valid 'data-placeholder' attribute to fix the TypeScript error. The CSS has been updated to use this data attribute for the placeholder effect.
-                            data-placeholder="본문 내용을 입력하세요..."
+                            data-placeholder="본문 내용을 입력하세요... (트레이너님의 전문 지식을 마음껏 뽐내주세요!)"
                             style={{ minHeight: '256px' }}
                         />
                     </div>
@@ -191,7 +223,7 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                         취소
                     </button>
                     <button onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isSaving ? '저장 중...' : '저장하기'}
+                        {isSaving ? '저장 중...' : (userProfile.isAdmin ? '게시하기' : (article ? '수정하기' : '승인 요청하기'))}
                     </button>
                 </div>
             </div>

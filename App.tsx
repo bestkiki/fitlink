@@ -227,6 +227,23 @@ export interface JobPost {
     createdAt: firebase.firestore.Timestamp;
 }
 
+export interface HealthArticle {
+  id: string;
+  title: string;
+  summary: string;
+  image: string;
+  category: 'workout' | 'diet' | 'recovery' | 'mindset';
+  content: string;
+  createdAt: firebase.firestore.Timestamp;
+  // New fields for trainer contribution
+  authorId: string;
+  authorName: string;
+  authorProfileImageUrl?: string;
+  authorRole: 'trainer' | 'admin';
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+}
+
 
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);

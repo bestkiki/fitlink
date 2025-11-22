@@ -3,21 +3,11 @@ import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { db } from '../firebase';
-import { UserProfile, Banner } from '../App';
-import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon, BookOpenIcon, BriefcaseIcon } from '../components/icons';
+import { UserProfile, Banner, HealthArticle } from '../App';
+import { SparklesIcon, PlusCircleIcon, PencilIcon, TrashIcon, PhotoIcon, BookOpenIcon, BriefcaseIcon, CheckCircleIcon, UserCircleIcon } from '../components/icons';
 import AddEditBannerModal from '../components/AddEditBannerModal';
 import AddEditHealthArticleModal from '../components/AddEditHealthArticleModal';
 import JobBoardPage from './JobBoardPage';
-
-export interface HealthArticle {
-  id: string;
-  title: string;
-  summary: string;
-  image: string;
-  category: 'workout' | 'diet' | 'recovery' | 'mindset';
-  content: string;
-  createdAt: firebase.firestore.Timestamp;
-}
 
 interface AdminDashboardProps {
   user: firebase.User;
@@ -38,6 +28,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
     const [editingArticle, setEditingArticle] = useState<HealthArticle | null>(null);
     
     const [currentView, setCurrentView] = useState<AdminView>('banners');
+    const [healthInfoTab, setHealthInfoTab] = useState<'published' | 'pending'>('published');
 
 
     useEffect(() => {
@@ -137,6 +128,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             alert("게시글 삭제에 실패했습니다.");
         }
     };
+
+    const handleApproveArticle = async (article: HealthArticle) => {
+        if(!window.confirm(`"${article.title}" 글을 승인하여 게시하시겠습니까?`)) return;
+        try {
+            await db.collection('health_articles').doc(article.id).update({ status: 'approved', rejectionReason: null });
+            // Optional: Notify the trainer
+        } catch(e) {
+            console.error("Error approving:", e);
+            alert("승인 처리에 실패했습니다.");
+        }
+    };
+
+    const handleRejectArticle = async (article: HealthArticle) => {
+        const reason = prompt("반려 사유를 입력해주세요 (선택):");
+        if (reason === null) return; // Cancelled
+
+        try {
+            await db.collection('health_articles').doc(article.id).update({ 
+                status: 'rejected',
+                rejectionReason: reason
+            });
+        } catch(e) {
+            console.error("Error rejecting:", e);
+            alert("반려 처리에 실패했습니다.");
+        }
+    };
     
     const renderBanners = () => (
         <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
@@ -197,26 +214,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
         </div>
     );
     
+    const filteredArticles = healthArticles.filter(a => {
+        if (healthInfoTab === 'published') return a.status === 'approved';
+        return a.status === 'pending';
+    });
+
     const renderHealthInfo = () => (
         <div className="bg-dark-accent p-6 rounded-lg shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white flex items-center">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center mb-4 md:mb-0">
                     <BookOpenIcon className="w-7 h-7 mr-3 text-primary" />
                     건강 정보 관리
                 </h2>
-                <button 
-                    onClick={() => handleOpenArticleModal(null)}
-                    className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-2 px-3 rounded-lg transition-colors text-sm"
-                >
-                    <PlusCircleIcon className="w-5 h-5" />
-                    <span>새 글 작성</span>
-                </button>
+                <div className="flex space-x-3">
+                    <div className="flex bg-dark rounded-lg p-1">
+                        <button 
+                            onClick={() => setHealthInfoTab('published')}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${healthInfoTab === 'published' ? 'bg-primary text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            게시됨
+                        </button>
+                        <button 
+                            onClick={() => setHealthInfoTab('pending')}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center ${healthInfoTab === 'pending' ? 'bg-primary text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            승인 대기
+                            {healthArticles.filter(a => a.status === 'pending').length > 0 && (
+                                <span className="ml-2 bg-red-500 text-white text-xs font-bold px-1.5 rounded-full">
+                                    {healthArticles.filter(a => a.status === 'pending').length}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                    <button 
+                        onClick={() => handleOpenArticleModal(null)}
+                        className="flex items-center space-x-2 bg-primary/80 hover:bg-primary text-white font-bold py-2 px-3 rounded-lg transition-colors text-sm"
+                    >
+                        <PlusCircleIcon className="w-5 h-5" />
+                        <span>새 글 작성</span>
+                    </button>
+                </div>
             </div>
              <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>
                         <tr className="border-b border-gray-700">
                             <th className="p-3 text-sm font-semibold text-gray-400">제목</th>
+                            <th className="p-3 text-sm font-semibold text-gray-400">작성자</th>
                             <th className="p-3 text-sm font-semibold text-gray-400">카테고리</th>
                             <th className="p-3 text-sm font-semibold text-gray-400">작성일</th>
                             <th className="p-3 text-sm font-semibold text-gray-400 text-right">관리</th>
@@ -224,21 +268,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
                     </thead>
                     <tbody>
                         {loadingArticles ? (
-                            <tr><td colSpan={4} className="text-center p-8 text-gray-500">게시글 목록을 불러오는 중...</td></tr>
-                        ) : healthArticles.length > 0 ? (
-                            healthArticles.map(article => (
+                            <tr><td colSpan={5} className="text-center p-8 text-gray-500">게시글 목록을 불러오는 중...</td></tr>
+                        ) : filteredArticles.length > 0 ? (
+                            filteredArticles.map(article => (
                                 <tr key={article.id} className="border-b border-gray-800 hover:bg-dark">
-                                    <td className="p-3 font-medium text-white">{article.title}</td>
+                                    <td className="p-3 font-medium text-white">
+                                        <a href={`/health-info`} target="_blank" rel="noreferrer" className="hover:underline">{article.title}</a>
+                                    </td>
+                                    <td className="p-3 text-gray-400">
+                                        <div className="flex items-center space-x-2">
+                                            {article.authorProfileImageUrl ? (
+                                                <img src={article.authorProfileImageUrl} className="w-6 h-6 rounded-full object-cover"/>
+                                            ) : (
+                                                <UserCircleIcon className="w-6 h-6"/>
+                                            )}
+                                            <span>{article.authorName}</span>
+                                            {article.authorRole === 'admin' && <span className="text-xs bg-gray-600 px-1.5 rounded">Admin</span>}
+                                        </div>
+                                    </td>
                                     <td className="p-3 text-gray-400 capitalize">{article.category}</td>
-                                    <td className="p-3 text-gray-400">{article.createdAt.toDate().toLocaleDateString('ko-KR')}</td>
+                                    <td className="p-3 text-gray-400">{article.createdAt?.toDate().toLocaleDateString('ko-KR') || '방금 전'}</td>
                                     <td className="p-3 text-right">
+                                        {healthInfoTab === 'pending' && (
+                                            <div className="inline-flex mr-2">
+                                                <button onClick={() => handleApproveArticle(article)} className="text-green-400 hover:text-green-300 p-1 mr-1" title="승인">
+                                                    <CheckCircleIcon className="w-5 h-5"/>
+                                                </button>
+                                                <button onClick={() => handleRejectArticle(article)} className="text-red-400 hover:text-red-300 p-1" title="반려">
+                                                    <TrashIcon className="w-5 h-5"/>
+                                                </button>
+                                            </div>
+                                        )}
                                         <button onClick={() => handleOpenArticleModal(article)} className="text-gray-400 hover:text-primary mr-2 p-1" title="수정"><PencilIcon className="w-5 h-5"/></button>
                                         <button onClick={() => handleDeleteArticle(article)} className="text-gray-400 hover:text-red-400 p-1" title="삭제"><TrashIcon className="w-5 h-5"/></button>
                                     </td>
                                 </tr>
                             ))
                         ) : (
-                            <tr><td colSpan={4} className="text-center p-8 text-gray-500">등록된 게시글이 없습니다.</td></tr>
+                            <tr><td colSpan={5} className="text-center p-8 text-gray-500">해당하는 게시글이 없습니다.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -305,6 +372,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
             onClose={() => { setIsArticleModalOpen(false); setEditingArticle(null); }}
             onSave={handleSaveArticle}
             article={editingArticle}
+            userProfile={userProfile}
+            user={user}
         />
     </>
   );

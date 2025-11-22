@@ -1,24 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { ArrowLeftIcon, MagnifyingGlassIcon } from '../components/icons';
 import HealthInfoDetail from './HealthInfoDetail';
 import firebase from 'firebase/compat/app';
+import { HealthArticle } from '../App';
 
 interface HealthInfoPageProps {
     onBack: () => void;
 }
 
 type Category = 'workout' | 'diet' | 'recovery' | 'mindset';
-
-export interface Article {
-    id: string;
-    title: string;
-    summary: string;
-    image: string;
-    category: Category;
-    content: string;
-    createdAt: firebase.firestore.Timestamp;
-}
 
 const categories: { id: string, name: string }[] = [
     { id: 'all', name: '전체' },
@@ -30,8 +22,8 @@ const categories: { id: string, name: string }[] = [
 
 const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
     const [view, setView] = useState<'list' | 'detail'>('list');
-    const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-    const [articles, setArticles] = useState<Article[]>([]);
+    const [selectedArticle, setSelectedArticle] = useState<HealthArticle | null>(null);
+    const [articles, setArticles] = useState<HealthArticle[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -40,9 +32,10 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
     useEffect(() => {
         setLoading(true);
         const unsubscribe = db.collection('health_articles')
+            .where('status', '==', 'approved')
             .orderBy('createdAt', 'desc')
             .onSnapshot(snapshot => {
-                const articlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+                const articlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthArticle));
                 setArticles(articlesData);
                 setLoading(false);
             }, error => {
@@ -53,7 +46,7 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
         return () => unsubscribe();
     }, []);
 
-    const handleArticleClick = (article: Article) => {
+    const handleArticleClick = (article: HealthArticle) => {
         setSelectedArticle(article);
         setView('detail');
     };
@@ -134,7 +127,10 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
                                 <div className="p-6">
                                     <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-primary transition-colors">{article.title}</h2>
                                     <p className="text-gray-400 mb-4 h-12 line-clamp-2">{article.summary}</p>
-                                    <span className="font-semibold text-primary group-hover:underline">자세히 보기 &rarr;</span>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-gray-500">{article.authorName}</span>
+                                        <span className="font-semibold text-primary group-hover:underline">자세히 보기 &rarr;</span>
+                                    </div>
                                 </div>
                             </div>
                         ))
