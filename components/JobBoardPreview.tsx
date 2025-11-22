@@ -99,7 +99,7 @@ const JobBoardPreview: React.FC<JobBoardPreviewProps> = ({ onNavigate }) => {
                 
                 <div className="text-center mt-12">
                     <button 
-                        onClick={() => onNavigate('signup')} 
+                        onClick={() => onNavigate('jobs')} 
                         className="inline-flex items-center space-x-2 text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary-dark px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-primary/30 transition-all transform hover:scale-105"
                     >
                         <span>더 많은 공고 보러가기</span>

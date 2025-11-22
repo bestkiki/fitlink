@@ -1,9 +1,11 @@
+
 import React from 'react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import JobBoardPage from './pages/JobBoardPage';
 
-export type Page = 'landing' | 'login' | 'signup';
+export type Page = 'landing' | 'login' | 'signup' | 'jobs';
 
 interface UnauthenticatedAppProps {
   currentPage: Page;
@@ -19,6 +21,13 @@ const UnauthenticatedApp: React.FC<UnauthenticatedAppProps> = ({ currentPage, on
         return <LoginPage onNavigate={onNavigate} />;
       case 'signup':
         return <SignupPage onNavigate={onNavigate} trainerId={trainerId} />;
+      case 'jobs':
+        return (
+            <JobBoardPage 
+                onBack={() => onNavigate('landing')} 
+                onNavigate={onNavigate}
+            />
+        );
       case 'landing':
       default:
         return <LandingPage onNavigate={onNavigate} onNavigateToHealthInfo={onNavigateToHealthInfo} />;

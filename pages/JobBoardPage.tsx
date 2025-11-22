@@ -5,22 +5,25 @@ import { db } from '../firebase';
 import { UserProfile, JobPost } from '../App';
 import { ArrowLeftIcon, BriefcaseIcon, MapPinIcon, ClockIcon, UserCircleIcon, PencilIcon, TrashIcon, PlusCircleIcon } from '../components/icons';
 import AddEditJobPostModal from '../components/AddEditJobPostModal';
+import { Page } from '../UnauthenticatedApp';
 
 interface JobBoardPageProps {
-    user: firebase.User;
-    userProfile: UserProfile;
+    user?: firebase.User | null;
+    userProfile?: UserProfile | null;
     onBack: () => void;
+    onNavigate?: (page: Page) => void;
 }
 
-const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }) => {
+const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack, onNavigate }) => {
     const [jobs, setJobs] = useState<JobPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingJob, setEditingJob] = useState<JobPost | null>(null);
     
-    // Only Trainers and Admins can write
-    const canWrite = userProfile.role === 'trainer' || userProfile.isAdmin;
+    // Only Trainers and Admins can write. Check if user is logged in first.
+    const isLoggedIn = !!user;
+    const canWrite = isLoggedIn && (userProfile?.role === 'trainer' || userProfile?.isAdmin);
 
     useEffect(() => {
         setLoading(true);
@@ -46,6 +49,7 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
     };
 
     const handleSaveJob = async (data: Omit<JobPost, 'id' | 'createdAt' | 'authorId' | 'authorName' | 'authorProfileImageUrl'>) => {
+        if (!user || !userProfile) return;
         try {
             if (editingJob) {
                 await db.collection('job_postings').doc(editingJob.id).update(data);
@@ -53,7 +57,7 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
                 await db.collection('job_postings').add({
                     ...data,
                     authorId: user.uid,
-                    authorName: userProfile.name || user.email,
+                    authorName: userProfile.name || user.email || 'Unknown',
                     authorProfileImageUrl: userProfile.profileImageUrl || null,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 });
@@ -77,12 +81,18 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
         }
     };
 
+    const handleLoginClick = () => {
+        if (onNavigate) {
+            onNavigate('login');
+        }
+    };
+
     return (
         <>
             <div className="container mx-auto px-6 py-12">
                 <button onClick={onBack} className="flex items-center space-x-2 text-primary mb-6 hover:underline">
                     <ArrowLeftIcon className="w-5 h-5" />
-                    <span>대시보드로 돌아가기</span>
+                    <span>{isLoggedIn ? '대시보드로 돌아가기' : '메인으로 돌아가기'}</span>
                 </button>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
@@ -120,13 +130,13 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {jobs.map(job => (
-                        <div key={job.id} className="bg-dark-accent p-6 rounded-lg shadow-lg border border-gray-800 hover:border-primary/50 transition-colors">
+                        <div key={job.id} className="bg-dark-accent p-6 rounded-lg shadow-lg border border-gray-800 hover:border-primary/50 transition-colors flex flex-col h-full relative overflow-hidden">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h2 className="text-xl font-bold text-white">{job.gymName}</h2>
                                     <p className="text-primary font-semibold text-sm mt-1">{job.recruitSection}</p>
                                 </div>
-                                {(user.uid === job.authorId || userProfile.isAdmin) && (
+                                {isLoggedIn && (user?.uid === job.authorId || userProfile?.isAdmin) && (
                                     <div className="flex space-x-2">
                                         <button onClick={() => handleOpenModal(job)} className="p-2 hover:bg-primary/10 rounded-full text-gray-400 hover:text-primary">
                                             <PencilIcon className="w-4 h-4" />
@@ -149,22 +159,72 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
                                 </div>
                             </div>
 
-                            {job.intro && (
-                                <div className="bg-dark p-3 rounded-md text-sm text-gray-400 mb-4 whitespace-pre-wrap line-clamp-3">
-                                    {job.intro}
+                            {isLoggedIn ? (
+                                // Authenticated View: Full Details
+                                <>
+                                    {job.intro && (
+                                        <div className="bg-dark p-3 rounded-md text-sm text-gray-400 mb-4 whitespace-pre-wrap">
+                                            {job.intro}
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-4 border-t border-gray-700 pt-3 flex-grow">
+                                        <div>
+                                            <span className="block font-semibold text-gray-300 mb-1">급여</span>
+                                            {job.salary}
+                                        </div>
+                                        <div>
+                                            <span className="block font-semibold text-gray-300 mb-1">자격요건</span>
+                                            <span className="whitespace-pre-wrap">{job.qualifications}</span>
+                                        </div>
+                                        {job.conditions && (
+                                            <div className="col-span-2">
+                                                <span className="block font-semibold text-gray-300 mb-1">근무 조건</span>
+                                                <span className="whitespace-pre-wrap">{job.conditions}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="bg-dark p-3 rounded text-xs space-y-2 mt-auto">
+                                        <p><span className="text-primary font-bold">지원방법:</span> {job.applicationMethod}</p>
+                                    </div>
+                                </>
+                            ) : (
+                                // Guest View: Restricted Details
+                                <div className="relative flex-grow flex flex-col">
+                                    <div className="bg-dark p-3 rounded-md text-sm text-gray-400 mb-4 whitespace-pre-wrap line-clamp-2">
+                                        {job.intro}
+                                    </div>
+                                    
+                                    <div className="mt-4 flex-grow relative">
+                                        {/* Blurred Content Placeholder */}
+                                        <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 pt-3 filter blur-sm select-none opacity-50">
+                                            <div>
+                                                <span className="block font-semibold text-gray-300 mb-1">급여</span>
+                                                협의 후 결정
+                                            </div>
+                                            <div>
+                                                <span className="block font-semibold text-gray-300 mb-1">자격요건</span>
+                                                생활스포츠지도사 2급
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="block font-semibold text-gray-300 mb-1">지원방법</span>
+                                                이메일 지원
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Login CTA Overlay */}
+                                        <div className="absolute inset-0 flex items-center justify-center z-10">
+                                            <button 
+                                                onClick={handleLoginClick}
+                                                className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-full text-sm shadow-lg transform hover:scale-105 transition-all flex items-center"
+                                            >
+                                                <span className="mr-2">🔒</span> 로그인하여 상세 내용 보기
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-
-                            <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 mb-4 border-t border-gray-700 pt-3">
-                                <div>
-                                    <span className="block font-semibold text-gray-300 mb-1">급여</span>
-                                    {job.salary}
-                                </div>
-                                <div>
-                                    <span className="block font-semibold text-gray-300 mb-1">자격요건</span>
-                                    <span className="line-clamp-1">{job.qualifications}</span>
-                                </div>
-                            </div>
 
                             <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700">
                                 <div className="flex items-center space-x-2">
@@ -177,23 +237,19 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
                                 </div>
                                 <span className="text-xs text-gray-600">{job.createdAt ? job.createdAt.toDate().toLocaleDateString() : '방금 전'}</span>
                             </div>
-                            
-                            <div className="mt-4">
-                                <div className="bg-dark p-3 rounded text-xs space-y-2">
-                                    <p><span className="text-primary font-bold">지원방법:</span> {job.applicationMethod}</p>
-                                </div>
-                            </div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            <AddEditJobPostModal
-                isOpen={isModalOpen}
-                onClose={() => { setIsModalOpen(false); setEditingJob(null); }}
-                onSave={handleSaveJob}
-                jobPost={editingJob}
-            />
+            {isLoggedIn && (
+                <AddEditJobPostModal
+                    isOpen={isModalOpen}
+                    onClose={() => { setIsModalOpen(false); setEditingJob(null); }}
+                    onSave={handleSaveJob}
+                    jobPost={editingJob}
+                />
+            )}
         </>
     );
 };

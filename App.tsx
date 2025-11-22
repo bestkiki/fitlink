@@ -247,6 +247,8 @@ const App: React.FC = () => {
       setCurrentPage('signup');
     } else if (parts[0] === 'health-info') {
       setCurrentPage('healthInfo');
+    } else if (parts[0] === 'jobs') {
+      setCurrentPage('jobs');
     }
 
 
@@ -277,6 +279,8 @@ const App: React.FC = () => {
     if (page === 'landing' || page === 'login' || page === 'signup') {
         window.history.pushState({}, '', '/');
         setTrainerId(null);
+    } else if (page === 'jobs') {
+        window.history.pushState({}, '', '/jobs');
     }
     setCurrentPage(page);
   };
@@ -336,7 +340,7 @@ const App: React.FC = () => {
       return <UnauthenticatedApp currentPage={'signup'} onNavigate={handleNavigate} trainerId={parts[1]} onNavigateToHealthInfo={handleNavigateToHealthInfo} />;
     }
 
-    return <UnauthenticatedApp currentPage={currentPage} onNavigate={handleNavigate} trainerId={trainerId} onNavigateToHealthInfo={handleNavigateToHealthInfo} />;
+    return <UnauthenticatedApp currentPage={currentPage as Page} onNavigate={handleNavigate} trainerId={trainerId} onNavigateToHealthInfo={handleNavigateToHealthInfo} />;
   };
 
   return (
