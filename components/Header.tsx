@@ -83,48 +83,50 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
 
       {/* Mobile Menu Overlay */}
       {!user && isMobileMenuOpen && (
-        <div className="fixed inset-x-0 top-[64px] bottom-0 bg-dark-accent/98 backdrop-blur-xl z-40 flex flex-col p-6 md:hidden animate-fade-in overflow-y-auto">
-            <nav className="flex flex-col w-full">
-                <a 
-                    href="#features" 
-                    onClick={(e) => { e.preventDefault(); closeMenu(); navigate('landing'); setTimeout(() => document.getElementById('features')?.scrollIntoView(), 100); }} 
-                    className="text-lg font-medium text-gray-200 hover:text-primary py-4 border-b border-gray-700"
-                >
-                    주요 기능
-                </a>
-                <button 
-                    onClick={() => { closeMenu(); navigate('community'); }} 
-                    className="text-lg font-medium text-gray-200 hover:text-primary py-4 text-left border-b border-gray-700"
-                >
-                    커뮤니티
-                </button>
-                <button 
-                    onClick={() => { closeMenu(); navigate('qna'); }} 
-                    className="text-lg font-medium text-gray-200 hover:text-primary py-4 text-left border-b border-gray-700"
-                >
-                    QnA
-                </button>
-                <button 
-                    onClick={() => { closeMenu(); onNavigateToHealthInfo?.(); }} 
-                    className="text-lg font-medium text-gray-200 hover:text-primary py-4 text-left border-b border-gray-700"
-                >
-                    건강 정보
-                </button>
-            </nav>
-            
-            <div className="mt-6 grid grid-cols-2 gap-3">
-                <button 
-                    onClick={() => { closeMenu(); navigate('login'); }} 
-                    className="text-base font-medium text-gray-300 hover:text-white py-3 text-center border border-gray-600 rounded-lg bg-transparent active:bg-gray-700 transition-colors"
-                >
-                    로그인
-                </button>
-                <button 
-                    onClick={() => { closeMenu(); navigate('signup'); }} 
-                    className="bg-primary hover:bg-primary-dark active:bg-primary-dark text-white font-bold py-3 text-center rounded-lg transition-colors text-base shadow-lg"
-                >
-                    무료로 시작하기
-                </button>
+        <div className="fixed inset-0 z-40 bg-dark/95 backdrop-blur-xl md:hidden pt-[64px]">
+            <div className="flex flex-col p-6 h-full overflow-y-auto">
+                <nav className="flex flex-col w-full space-y-2">
+                    <a 
+                        href="#features" 
+                        onClick={(e) => { e.preventDefault(); closeMenu(); navigate('landing'); setTimeout(() => document.getElementById('features')?.scrollIntoView(), 100); }} 
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 rounded-lg transition-colors"
+                    >
+                        주요 기능
+                    </a>
+                    <button 
+                        onClick={() => { closeMenu(); navigate('community'); }} 
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                    >
+                        커뮤니티
+                    </button>
+                    <button 
+                        onClick={() => { closeMenu(); navigate('qna'); }} 
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                    >
+                        QnA
+                    </button>
+                    <button 
+                        onClick={() => { closeMenu(); onNavigateToHealthInfo?.(); }} 
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                    >
+                        건강 정보
+                    </button>
+                </nav>
+                
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                    <button 
+                        onClick={() => { closeMenu(); navigate('login'); }} 
+                        className="text-base font-medium text-gray-300 hover:text-white py-3 text-center border border-gray-600 rounded-lg bg-transparent active:bg-gray-700 transition-colors"
+                    >
+                        로그인
+                    </button>
+                    <button 
+                        onClick={() => { closeMenu(); navigate('signup'); }} 
+                        className="bg-primary hover:bg-primary-dark active:bg-primary-dark text-white font-bold py-3 text-center rounded-lg transition-colors text-base shadow-lg"
+                    >
+                        무료로 시작하기
+                    </button>
+                </div>
             </div>
         </div>
       )}
