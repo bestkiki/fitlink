@@ -20,6 +20,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
     const [isPosting, setIsPosting] = useState(false);
     
     const [visibleCommentsPostId, setVisibleCommentsPostId] = useState<string | null>(null);
+    const [loadingComments, setLoadingComments] = useState<string | null>(null);
     const [newComment, setNewComment] = useState('');
     const [isCommenting, setIsCommenting] = useState(false);
 
@@ -119,12 +120,15 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
             const post = posts.find(p => p.id === postId);
             // Fetch comments only if they haven't been loaded yet
             if (post && !post.comments) {
+                setLoadingComments(postId);
                 try {
                     const commentsSnapshot = await db.collection('community_posts').doc(postId).collection('comments').orderBy('createdAt', 'asc').get();
                     const commentsData = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
                     setPosts(prevPosts => prevPosts.map(p => p.id === postId ? { ...p, comments: commentsData } : p));
                 } catch (error) {
                     console.error("Error fetching comments:", error);
+                } finally {
+                    setLoadingComments(null);
                 }
             }
         }
@@ -333,6 +337,18 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ user, userProfile, onBack
                             {/* Comments Section */}
                             {visibleCommentsPostId === post.id && (
                                 <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-4">
+                                    {loadingComments === post.id && (
+                                        <div className="text-center text-gray-500 py-2">
+                                            <p>댓글을 불러오는 중...</p>
+                                        </div>
+                                    )}
+                                    
+                                    {!loadingComments && (!post.comments || post.comments.length === 0) && (
+                                        <div className="text-center text-gray-500 py-2 text-sm">
+                                            <p>아직 댓글이 없습니다.</p>
+                                        </div>
+                                    )}
+
                                     {post.comments?.map(comment => (
                                         <div key={comment.id} className="flex items-start space-x-3">
                                              {comment.authorProfileImageUrl ? (
