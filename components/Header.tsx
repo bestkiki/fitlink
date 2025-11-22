@@ -20,7 +20,6 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
   const handleLogoClick = () => {
     if (user) {
       // For logged-in users, clicking the logo should take them to their dashboard.
-      // A simple way to reset the state of the dashboard is to navigate to the root.
       window.location.href = '/';
     } else {
       // For logged-out users, it navigates to the landing page.
@@ -66,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
               </div>
               {/* Mobile Menu Toggle Button */}
               <button 
-                className="md:hidden text-gray-300 hover:text-white focus:outline-none z-50 relative p-1"
+                className="md:hidden text-gray-300 hover:text-white focus:outline-none z-50 p-2"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="Toggle menu"
               >
@@ -83,31 +82,31 @@ const Header: React.FC<HeaderProps> = ({ user, onNavigate, onLogout, onNavigateT
 
       {/* Mobile Menu Overlay */}
       {!user && isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-dark/95 backdrop-blur-xl md:hidden pt-[64px]">
-            <div className="flex flex-col p-6 h-full overflow-y-auto">
-                <nav className="flex flex-col w-full space-y-2">
+        <div className="fixed inset-x-0 top-[64px] bottom-0 z-40 bg-dark/95 backdrop-blur-xl md:hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4">
+                <nav className="flex flex-col w-full space-y-1">
                     <a 
                         href="#features" 
                         onClick={(e) => { e.preventDefault(); closeMenu(); navigate('landing'); setTimeout(() => document.getElementById('features')?.scrollIntoView(), 100); }} 
-                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 rounded-lg transition-colors"
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 rounded-lg transition-colors border-b border-white/5"
                     >
                         주요 기능
                     </a>
                     <button 
                         onClick={() => { closeMenu(); navigate('community'); }} 
-                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors border-b border-white/5"
                     >
                         커뮤니티
                     </button>
                     <button 
                         onClick={() => { closeMenu(); navigate('qna'); }} 
-                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors border-b border-white/5"
                     >
                         QnA
                     </button>
                     <button 
                         onClick={() => { closeMenu(); onNavigateToHealthInfo?.(); }} 
-                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors"
+                        className="text-lg font-medium text-gray-200 hover:text-primary hover:bg-white/5 py-3 px-4 text-left rounded-lg transition-colors border-b border-white/5"
                     >
                         건강 정보
                     </button>
