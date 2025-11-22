@@ -383,6 +383,7 @@ const TrainerDashboard: React.FC<TrainerDashboardProps> = ({ user, userProfile }
                                                 </td>
                                                 <td className="p-4 text-gray-400 text-sm">{article.createdAt?.toDate().toLocaleDateString()}</td>
                                                 <td className="p-4 text-right">
+                                                    {/* Allow edit if status is pending or rejected */}
                                                     {article.status !== 'approved' && (
                                                         <button onClick={() => handleOpenArticleModal(article)} className="text-gray-400 hover:text-primary p-2 mr-2">
                                                             <PencilIcon className="w-5 h-5"/>

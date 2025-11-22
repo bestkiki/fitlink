@@ -101,8 +101,21 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
         
         const isAdmin = userProfile.isAdmin;
         const role = isAdmin ? 'admin' : 'trainer';
-        // Admins publish immediately, trainers need approval
-        const status = article ? article.status : (isAdmin ? 'approved' : 'pending'); 
+        
+        // Determine status logic:
+        // 1. If modifying existing article, keep its status unless explicit change logic exists (not here yet).
+        // 2. If new article: Admin -> 'approved', Trainer -> 'pending'.
+        // 3. Backward compatibility: If article exists but has no status, treat as 'approved' if we are just editing content.
+        let status = article?.status;
+        if (!status) {
+             if (article) {
+                 // Legacy article being edited -> default to approved as it was public before
+                 status = 'approved';
+             } else {
+                 // New article
+                 status = isAdmin ? 'approved' : 'pending';
+             }
+        }
 
         try {
             await onSave({

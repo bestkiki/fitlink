@@ -31,12 +31,14 @@ const HealthInfoPage: React.FC<HealthInfoPageProps> = ({ onBack }) => {
 
     useEffect(() => {
         setLoading(true);
+        // Fetch all articles and filter in client to support legacy docs (undefined status) and new docs
         const unsubscribe = db.collection('health_articles')
-            .where('status', '==', 'approved')
             .orderBy('createdAt', 'desc')
             .onSnapshot(snapshot => {
                 const articlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthArticle));
-                setArticles(articlesData);
+                // Show articles that are explicitly approved OR have no status (legacy)
+                const visibleArticles = articlesData.filter(a => !a.status || a.status === 'approved');
+                setArticles(visibleArticles);
                 setLoading(false);
             }, error => {
                 console.error("Error fetching health articles:", error);

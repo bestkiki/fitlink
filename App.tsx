@@ -240,7 +240,8 @@ export interface HealthArticle {
   authorName: string;
   authorProfileImageUrl?: string;
   authorRole: 'trainer' | 'admin';
-  status: 'pending' | 'approved' | 'rejected';
+  // Make status optional for backward compatibility
+  status?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
 }
 

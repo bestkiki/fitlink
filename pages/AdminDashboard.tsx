@@ -215,7 +215,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, userProfile }) =>
     );
     
     const filteredArticles = healthArticles.filter(a => {
-        if (healthInfoTab === 'published') return a.status === 'approved';
+        // Include articles with no status (legacy) in the 'published' list
+        if (healthInfoTab === 'published') return a.status === 'approved' || !a.status;
         return a.status === 'pending';
     });
 
