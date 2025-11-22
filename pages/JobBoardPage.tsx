@@ -15,6 +15,7 @@ interface JobBoardPageProps {
 const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }) => {
     const [jobs, setJobs] = useState<JobPost[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingJob, setEditingJob] = useState<JobPost | null>(null);
     
@@ -29,8 +30,10 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
                 const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JobPost));
                 setJobs(data);
                 setLoading(false);
-            }, error => {
-                console.error("Error fetching jobs:", error);
+                setError(null);
+            }, err => {
+                console.error("Error fetching jobs:", err);
+                setError("공고 목록을 불러오지 못했습니다. 관리자에게 문의하거나 권한을 확인해주세요.");
                 setLoading(false);
             });
 
@@ -59,7 +62,7 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
             setEditingJob(null);
         } catch (error) {
             console.error("Error saving job post:", error);
-            throw new Error("공고 저장에 실패했습니다.");
+            throw new Error("공고 저장에 실패했습니다. 권한이 있는지 확인해주세요.");
         }
     };
 
@@ -100,7 +103,14 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
 
                 {loading && <p className="text-center text-gray-400 p-8">공고를 불러오는 중...</p>}
                 
-                {!loading && jobs.length === 0 && (
+                {error && (
+                    <div className="text-center bg-red-500/10 border border-red-500/50 rounded-lg p-8 mb-8">
+                        <p className="text-red-400 font-bold mb-2">오류 발생</p>
+                        <p className="text-gray-300">{error}</p>
+                    </div>
+                )}
+                
+                {!loading && !error && jobs.length === 0 && (
                     <div className="text-center text-gray-500 p-12 bg-dark-accent rounded-lg">
                         <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-600 mb-4" />
                         <p>현재 등록된 구인 공고가 없습니다.</p>
@@ -165,10 +175,9 @@ const JobBoardPage: React.FC<JobBoardPageProps> = ({ user, userProfile, onBack }
                                     )}
                                     <span className="text-xs text-gray-500">{job.authorName}</span>
                                 </div>
-                                <span className="text-xs text-gray-600">{job.createdAt?.toDate().toLocaleDateString()}</span>
+                                <span className="text-xs text-gray-600">{job.createdAt ? job.createdAt.toDate().toLocaleDateString() : '방금 전'}</span>
                             </div>
                             
-                            {/* Expandable Details could go here, or navigate to detail page. For now, simple list view is enough for requirements. */}
                             <div className="mt-4">
                                 <div className="bg-dark p-3 rounded text-xs space-y-2">
                                     <p><span className="text-primary font-bold">지원방법:</span> {job.applicationMethod}</p>
