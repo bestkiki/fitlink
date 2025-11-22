@@ -21,15 +21,26 @@ const categories = [
     { id: 'mindset', name: '마인드셋' }
 ];
 
+// Improved Editor Toolbar with Buttons
 const EditorToolbar: React.FC<{ onCommand: (command: string, value?: string) => void }> = ({ onCommand }) => {
+    const btnClass = "p-2 h-8 min-w-[32px] flex justify-center items-center rounded hover:bg-gray-600 transition-colors text-sm font-bold border border-gray-600 text-gray-300";
+    
+    const handleClick = (e: React.MouseEvent, command: string, value?: string) => {
+        e.preventDefault(); // Prevent losing focus from editor
+        onCommand(command, value);
+    };
+
     return (
-        <div className="flex items-center space-x-2 p-2 bg-dark border-b border-gray-600">
-            <button type="button" title="굵게" onClick={() => onCommand('bold')} className="p-2 w-10 h-10 flex justify-center items-center hover:bg-dark-accent rounded font-bold">B</button>
-            <select onChange={(e) => onCommand('formatBlock', e.target.value)} className="bg-dark text-white p-2 rounded border border-gray-500 focus:outline-none focus:ring-1 focus:ring-primary">
-                <option value="p">본문</option>
-                <option value="h3">소제목</option>
-                <option value="blockquote">인용</option>
-            </select>
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-dark border-b border-gray-600 sticky top-0 z-10">
+            <button type="button" title="굵게" onClick={(e) => handleClick(e, 'bold')} className={btnClass}>B</button>
+            <button type="button" title="기울임" onClick={(e) => handleClick(e, 'italic')} className={`${btnClass} italic`}>I</button>
+            <div className="w-px h-6 bg-gray-600 mx-1"></div>
+            <button type="button" title="소제목" onClick={(e) => handleClick(e, 'formatBlock', 'H3')} className={btnClass}>H3</button>
+            <button type="button" title="본문" onClick={(e) => handleClick(e, 'formatBlock', 'P')} className={btnClass}>P</button>
+            <div className="w-px h-6 bg-gray-600 mx-1"></div>
+            <button type="button" title="인용구" onClick={(e) => handleClick(e, 'formatBlock', 'BLOCKQUOTE')} className={btnClass}>“ ”</button>
+            <button type="button" title="글머리 기호 목록" onClick={(e) => handleClick(e, 'insertUnorderedList')} className={btnClass}>• 목록</button>
+            <button type="button" title="번호 매기기 목록" onClick={(e) => handleClick(e, 'insertOrderedList')} className={btnClass}>1. 목록</button>
         </div>
     );
 };
@@ -52,7 +63,7 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
             setSummary(article?.summary || '');
             setImage(article?.image || '');
             setCategory(article?.category || 'workout');
-            const initialContent = article?.content || '';
+            const initialContent = article?.content || '<p><br></p>'; // Default to a paragraph to prevent raw text nodes
             setContent(initialContent);
 
             setTimeout(() => {
@@ -73,8 +84,8 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
     const executeCommand = (command: string, value?: string) => {
         document.execCommand(command, false, value);
         if (editorRef.current) {
-            setContent(editorRef.current.innerHTML);
             editorRef.current.focus();
+            setContent(editorRef.current.innerHTML);
         }
     };
 
@@ -102,17 +113,11 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
         const isAdmin = userProfile.isAdmin;
         const role = isAdmin ? 'admin' : 'trainer';
         
-        // Determine status logic:
-        // 1. If modifying existing article, keep its status unless explicit change logic exists (not here yet).
-        // 2. If new article: Admin -> 'approved', Trainer -> 'pending'.
-        // 3. Backward compatibility: If article exists but has no status, treat as 'approved' if we are just editing content.
         let status = article?.status;
         if (!status) {
              if (article) {
-                 // Legacy article being edited -> default to approved as it was public before
                  status = 'approved';
              } else {
-                 // New article
                  status = isAdmin ? 'approved' : 'pending';
              }
         }
@@ -138,14 +143,61 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={article ? "게시글 수정" : "새 게시글 작성"}>
+            {/* WYSIWYG Editor Styles */}
             <style>{`
                 .editor-placeholder[contentEditable=true]:empty:before {
                     content: attr(data-placeholder);
                     color: #6B7280; /* gray-500 */
                     pointer-events: none;
-                    display: block; /* For Firefox */
+                    display: block; 
+                }
+                /* Editor WYSIWYG Styles matching Detail Page */
+                .editor-content h3 {
+                    font-size: 1.25rem; /* 20px */
+                    line-height: 1.75rem;
+                    font-weight: 700;
+                    color: white;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
+                    border-bottom: 1px solid #4B5563; /* gray-600 */
+                    padding-bottom: 0.25rem;
+                }
+                .editor-content p {
+                    margin-bottom: 1rem;
+                    line-height: 1.6;
+                    color: #D1D5DB; /* gray-300 */
+                }
+                .editor-content blockquote {
+                    border-left: 4px solid #14B8A6; /* primary */
+                    padding-left: 1rem;
+                    margin: 1.5rem 0;
+                    color: #D1D5DB; 
+                    font-style: italic;
+                    background-color: rgba(20, 184, 166, 0.1);
+                    padding: 1rem;
+                    border-radius: 0.25rem;
+                }
+                .editor-content ul {
+                    list-style-type: disc;
+                    padding-left: 1.5rem;
+                    margin-bottom: 1rem;
+                    color: #D1D5DB;
+                }
+                .editor-content ol {
+                    list-style-type: decimal;
+                    padding-left: 1.5rem;
+                    margin-bottom: 1rem;
+                    color: #D1D5DB;
+                }
+                .editor-content li {
+                    margin-bottom: 0.25rem;
+                }
+                .editor-content b, .editor-content strong {
+                    color: #14B8A6;
+                    font-weight: 700;
                 }
             `}</style>
+            
             <div className="space-y-4">
                 {error && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-md">{error}</p>}
                 {!userProfile.isAdmin && !article && (
@@ -217,18 +269,20 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                     <label htmlFor="article-content" className="block text-sm font-medium text-gray-300 mb-1">
                         본문 <span className="text-red-400">*</span>
                     </label>
-                    <div className="border border-gray-600 rounded-md">
+                    <div className="border border-gray-600 rounded-md overflow-hidden flex flex-col">
                         <EditorToolbar onCommand={executeCommand} />
                         <div
                             ref={editorRef}
                             id="article-content"
                             contentEditable={true}
                             onInput={handleContentChange}
-                            className="w-full bg-dark p-3 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-primary rounded-b-md editor-placeholder"
-                            data-placeholder="본문 내용을 입력하세요... (트레이너님의 전문 지식을 마음껏 뽐내주세요!)"
-                            style={{ minHeight: '256px' }}
+                            className="w-full bg-dark p-4 overflow-y-auto focus:outline-none focus:bg-dark-accent/30 editor-content editor-placeholder min-h-[300px]"
+                            data-placeholder="내용을 입력하세요. 상단 툴바를 이용해 스타일을 적용할 수 있습니다."
                         />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Tip: 글 작성 시 Enter를 누르면 문단이 나뉩니다. Shift+Enter를 누르면 줄만 바뀝니다.
+                    </p>
                 </div>
 
                 <div className="flex justify-end space-x-3 pt-4">
