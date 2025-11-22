@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DumbbellIcon, Bars3Icon, XMarkIcon } from './icons';
 import { Page } from '../UnauthenticatedApp';
