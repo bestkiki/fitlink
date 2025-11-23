@@ -131,7 +131,8 @@ const AddEditHealthArticleModal: React.FC<AddEditHealthArticleModalProps> = ({ i
                 content,
                 authorId: article?.authorId || user.uid,
                 authorName: article?.authorName || userProfile.name || user.email || 'Unknown',
-                authorProfileImageUrl: article?.authorProfileImageUrl || userProfile.profileImageUrl || undefined,
+                // FIX: Use null instead of undefined for Firestore compatibility
+                authorProfileImageUrl: article?.authorProfileImageUrl || userProfile.profileImageUrl || null,
                 authorRole: article?.authorRole || role,
                 status: status,
             });

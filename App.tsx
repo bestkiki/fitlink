@@ -238,7 +238,7 @@ export interface HealthArticle {
   // New fields for trainer contribution
   authorId: string;
   authorName: string;
-  authorProfileImageUrl?: string;
+  authorProfileImageUrl?: string | null;
   authorRole: 'trainer' | 'admin';
   // Make status optional for backward compatibility
   status?: 'pending' | 'approved' | 'rejected';
